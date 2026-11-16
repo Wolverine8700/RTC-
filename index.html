@@ -62,9 +62,10 @@
 
     @media print {
       body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { position: absolute; left: 0; top: 0; width: 100%; background: #FFFFFF; padding: 12mm; }
-      .no-print { display: none !important; }
+      #tab-billing { display: block !important; }
+      #print-area, #print-area * { visibility: visible !important; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; background: #FFFFFF; padding: 10mm; z-index: 99999; }
+      .no-print, #party-ledger-modal, aside, header, nav { display: none !important; }
     }
   </style>
 
@@ -937,7 +938,7 @@
   </main>
 
   <!-- PARTY KHATA LEDGER MODAL -->
-  <div id="party-ledger-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3">
+  <div id="party-ledger-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
     <div class="bg-white rounded-2xl border-2 border-[#0D2C4D] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
       <div class="bg-[#0D2C4D] text-white px-5 py-3.5 flex items-center justify-between">
         <div>
@@ -974,9 +975,11 @@
           <tbody id="ledger-tbody"></tbody>
         </table>
       </div>
-      <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-end gap-2">
-        <a id="ledger-wa-btn" href="#" target="_blank" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700">💬 WhatsApp સ્ટેટમેન્ટ મોકલો</a>
-        <button id="ledger-print-btn" class="px-4 py-2 rounded-xl bg-[#0D2C4D] text-[#D4AF37] text-xs font-bold hover:opacity-90">🖨️ પ્રિન્ટ / PDF</button>
+      <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-2">
+        <a id="ledger-call-btn" href="#" class="px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 flex items-center gap-1">📞 કોલ કરો</a>
+        <a id="ledger-sms-btn" href="#" class="px-3.5 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 flex items-center gap-1">✉️ ટેક્સ્ટ મેસેજ (SMS)</a>
+        <a id="ledger-wa-btn" href="#" target="_blank" rel="noopener" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1">💬 WhatsApp સ્ટેટમેન્ટ</a>
+        <button id="ledger-print-btn" type="button" class="px-4 py-2 rounded-xl bg-[#0D2C4D] text-[#D4AF37] text-xs font-bold hover:opacity-90 flex items-center gap-1">🖨️ પ્રિન્ટ / PDF</button>
       </div>
     </div>
   </div>
@@ -1158,17 +1161,43 @@
       if (!navigator.onLine) { setCloudBadge('📴 Offline Saved', false); return Promise.resolve(); }
       setCloudBadge('☁️ Saving...', false);
       try {
+        const nowTs = Date.now();
+        ['parties', 'items', 'bills', 'payments', 'expenses'].forEach(k => {
+          (state[k] || []).forEach(item => {
+            if (item && !item.updatedAt) item.updatedAt = nowTs;
+          });
+        });
         const payload = Object.assign({}, state, { pinHash: getActivePinHash() });
         return fetch(url, {
-          method: 'POST', mode: 'no-cors', keepalive: true,
-          headers: { 'Content-Type': 'text/plain' },
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
-        }).then(() => {
+        })
+        .then(res => res.json())
+        .then(resData => {
+          if (resData && resData.ok === false) {
+            setCloudBadge('⚠️ Sync Error', false);
+            if (force) showToast('Sheet સેવ એરર: ' + (resData.error || 'Unknown'));
+            return;
+          }
           setPendingCount(0);
           lastCloudSyncTime = new Date().toLocaleTimeString();
           setCloudBadge('☁️ Auto-Saved ✔', true);
           if (force) showToast('ક્લાઉડ (Google Sheet) માં સેવ થઈ ગયું ✔');
-        }).catch(() => { setCloudBadge('📴 Offline Saved', false); });
+        })
+        .catch(() => {
+          fetch(url, {
+            method: 'POST', mode: 'no-cors', keepalive: true,
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          }).then(() => {
+            setPendingCount(0);
+            lastCloudSyncTime = new Date().toLocaleTimeString();
+            setCloudBadge('☁️ Auto-Saved ✔', true);
+            if (force) showToast('ક્લાઉડ (Google Sheet) માં સેવ થઈ ગયું ✔');
+          }).catch(() => { setCloudBadge('📴 Offline Saved', false); });
+        });
       } catch (e) { return Promise.resolve(); }
     }
     function saveState() {
@@ -1499,17 +1528,17 @@
             const kind = billObj.kind || 'Sales';
             if (kind === 'Return') {
               const p = activeList(state.parties).find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
-              if (p) p.due = (Number(p.due) || 0) + (Number(billObj.total) || 0);
+              if (p) { p.due = (Number(p.due) || 0) + (Number(billObj.total) || 0); p.updatedAt = Date.now(); }
             } else if (billObj.payment === 'Credit' && kind === 'Sales') {
               const p = activeList(state.parties).find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
-              if (p) p.due = Math.max(0, (p.due || 0) - (Number(billObj.total) || 0));
+              if (p) { p.due = Math.max(0, (p.due || 0) - (Number(billObj.total) || 0)); p.updatedAt = Date.now(); }
             }
             (billObj.rows || []).forEach(r => {
               const it = activeList(state.items).find(x => x.name === r.desc);
               if (it) {
                 const qty = Number(r.kg)||0;
                 const rev = (kind === 'Purchase' || kind === 'Return') ? -qty : qty;
-                it.stock = Math.max(0, (Number(it.stock)||0) + rev);
+                it.stock = Math.max(0, (Number(it.stock)||0) + rev); it.updatedAt = Date.now();
               }
             });
           }
@@ -1634,47 +1663,66 @@
             ? (p.dueDate === todayISO ? '<span class="text-rose-600 font-bold">🔴 આજે ઉઘરાણી</span>' : (p.dueDate < todayISO ? '<span class="text-amber-700 font-bold">⚠️ મુદત વીતી</span>' : `<span class="text-blue-700 font-semibold">📅 ${fmtDate(p.dueDate)}</span>`))
             : '<span class="text-slate-400">તારીખ સેટ નથી</span>';
           const cleanPh = String(p.phone || '').replace(/[^0-9]/g, '');
-          const waMsg = encodeURIComponent(`નમસ્તે ${esc(p.name)} જી, Raj Trading Company તરફથી નમ્ર વિનંતી: આપના ખાતામાં ₹${dueVal.toFixed(0)} બાકી છે${p.dueDate ? ' (ઉઘરાણી તારીખ: ' + fmtDate(p.dueDate) + ')' : ''}. કૃપા કરીને પેમેન્ટ જમા કરાવવા વિનંતી. આભાર!`);
+          const ph10 = cleanPh.slice(-10);
+          const msgTxt = `નમસ્તે ${p.name} જી, રાજ ટ્રેડિંગ કંપની (Raj Trading Company) તરફથી નમ્ર વિનંતી: આપના ખાતામાં ₹${dueVal.toFixed(0)} બાકી છે${p.dueDate ? ' (ઉઘરાણી તારીખ: ' + fmtDate(p.dueDate) + ')' : ''}. કૃપા કરીને પેમેન્ટ જમા કરાવવા વિનંતી. મો. +91 88662 14018`;
+          const waMsg = encodeURIComponent(msgTxt);
+          const smsHref = ph10 ? `sms:+91${ph10}?body=${waMsg}` : `sms:?body=${waMsg}`;
+          const waHref = ph10 ? `https://wa.me/91${ph10}?text=${waMsg}` : `https://wa.me/?text=${waMsg}`;
           kGrid.innerHTML += `<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5">
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-full bg-[#0D2C4D] text-[#D4AF37] font-extrabold flex items-center justify-center text-lg flex-shrink-0">${ini}</div>
                 <div>
                   <div class="font-bold text-[#0D2C4D] text-sm">${esc(p.name)}</div>
-                  <div class="text-xs text-slate-500">${p.city || 'મોટીઝેર'} • ${esc(p.phone || '-')}</div>
+                  <div class="text-xs text-slate-500">${esc(p.city || 'મોટીઝેર')} • ${esc(p.phone || '-')}</div>
                 </div>
               </div>
-              <div class="text-right flex items-start gap-2">
+              <div class="text-right flex items-start gap-1.5">
                 <div>
                   <div class="font-extrabold text-base ${dueVal>0 ? 'text-rose-600' : 'text-emerald-600'}">₹ ${dueVal.toFixed(0)}</div>
                   <div class="text-[11px] font-semibold text-slate-500">${dueVal>0 ? dStatus : 'ચોખ્ખું ✔'}</div>
                 </div>
-                <button data-ledger-party="${p.id}" title="ખાતા સ્ટેટમેન્ટ" class="open-ledger px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold">📒</button><button data-del-party="${p.id}" title="પાર્ટી કાઢો" class="del-party px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold">🗑️</button>
+                <button data-ledger-party="${p.id}" title="ખાતા સ્ટેટમેન્ટ" class="open-ledger px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold">📒</button>
+                <button data-del-party="${p.id}" title="પાર્ટી કાઢો" class="del-party px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold">🗑️</button>
               </div>
             </div>
-            ${dueVal > 0 ? `<div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <label class="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">ઉઘરાણી તારીખ:
                 <input type="date" data-party-duedate="${p.id}" value="${p.dueDate || ''}" class="party-duedate-input border border-slate-300 rounded px-2 py-0.5 text-xs font-semibold">
               </label>
-              <div class="flex gap-1.5">
-                <button data-ledger-party="${p.id}" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-[11px] font-bold">📒 ખાતું</button>
-                ${cleanPh ? `<a href="https://wa.me/91${cleanPh.slice(-10)}?text=${waMsg}" target="_blank" class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-[11px] font-bold">💬 યાદ</a>` : ''}
-                <button data-clear-due="${p.id}" class="clear-due px-2 py-1 rounded bg-slate-100 text-slate-700 text-[11px] font-bold">✔ જમા</button>
+              <div class="flex flex-wrap gap-1.5">
+                <button data-ledger-party="${p.id}" class="open-ledger px-2.5 py-1 rounded-lg bg-[#0D2C4D] text-[#D4AF37] text-[11px] font-bold">📒 ખાતું / પ્રિન્ટ</button>
+                ${ph10 ? `<a href="tel:+91${ph10}" class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 text-[11px] font-bold">📞 કોલ</a>` : ''}
+                <a href="${smsHref}" class="px-2 py-1 rounded-lg bg-amber-100 text-amber-900 text-[11px] font-bold">✉️ SMS</a>
+                <a href="${waHref}" target="_blank" rel="noopener" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">💬 WA</a>
+                ${dueVal > 0 ? `<button data-clear-due="${p.id}" class="clear-due px-2 py-1 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold">✔ જમા</button>` : ''}
               </div>
-            </div>` : ''}
+            </div>
           </div>`;
         });
       }
       const pTbody = document.getElementById('parties-tbody');
       pTbody.innerHTML = '';
       activeList(state.parties).forEach(p => {
+        const dueVal = Number(p.due || 0);
+        const cleanPh = String(p.phone || '').replace(/[^0-9]/g, '');
+        const ph10 = cleanPh.slice(-10);
+        const msgTxt = `નમસ્તે ${p.name} જી, રાજ ટ્રેડિંગ કંપની તરફથી નમ્ર વિનંતી: આપના ખાતામાં ₹${dueVal.toFixed(0)} બાકી છે. કૃપા કરીને પેમેન્ટ જમા કરાવવા વિનંતી. મો. +91 88662 14018`;
+        const smsHref = ph10 ? `sms:+91${ph10}?body=${encodeURIComponent(msgTxt)}` : `sms:?body=${encodeURIComponent(msgTxt)}`;
         pTbody.innerHTML += `<tr class="border-b border-slate-200">
           <td class="p-2.5 font-bold">${esc(p.name)}</td>
-          <td class="p-2.5">${p.phone}</td>
-          <td class="p-2.5">${p.city}</td>
-          <td class="p-2.5 text-right font-bold ${p.due>0?'text-amber-700':'text-emerald-700'}">₹ ${(p.due||0).toFixed(2)}</td>
+          <td class="p-2.5">${esc(p.phone || '-')}</td>
+          <td class="p-2.5">${esc(p.city || '-')}</td>
+          <td class="p-2.5 text-right font-bold ${dueVal>0?'text-amber-700':'text-emerald-700'}">₹ ${dueVal.toFixed(2)}</td>
           <td class="p-2.5 text-center"><input type="date" data-party-duedate="${p.id}" value="${p.dueDate || ''}" class="party-duedate-input border border-slate-300 rounded px-2 py-1 text-xs"></td>
-          <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button data-wa-due="${p.id}" class="wa-due-party px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">💬 ઉઘરાણી</button><button data-ledger-party="${p.id}" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">📒 સ્ટેટમેન્ટ</button><button data-clear-due="${p.id}" class="clear-due px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">જમા / Clear</button><button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️ કાઢો</button></div></td>
+          <td class="p-2.5 text-center"><div class="flex flex-wrap items-center justify-center gap-1.5">
+            ${ph10 ? `<a href="tel:+91${ph10}" class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold" title="કોલ કરો">📞 કોલ</a>` : ''}
+            <a href="${smsHref}" class="px-2 py-1 rounded bg-amber-100 text-amber-900 text-xs font-bold" title="ટેક્સ્ટ મેસેજ">✉️ SMS</a>
+            <button data-wa-due="${p.id}" class="wa-due-party px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">💬 WA</button>
+            <button data-ledger-party="${p.id}" class="open-ledger px-2 py-1 rounded bg-[#0D2C4D] text-[#D4AF37] text-xs font-bold">📒 સ્ટેટમેન્ટ</button>
+            <button data-clear-due="${p.id}" class="clear-due px-2 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">✔ જમા</button>
+            <button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️</button>
+          </div></td>
         </tr>`;
       });
       document.querySelectorAll('.party-duedate-input').forEach(inp => {
@@ -1682,6 +1730,7 @@
           const p = activeList(state.parties).find(x => x.id === Number(e.target.dataset.partyDuedate));
           if (p) {
             p.dueDate = e.target.value;
+            p.updatedAt = Date.now();
             saveState();
             renderAll();
             showToast(p.dueDate ? `${esc(p.name)} ની ઉઘરાણી તારીખ ${fmtDate(p.dueDate)} સેટ થઈ 📅` : `${esc(p.name)} ની ઉઘરાણી તારીખ દૂર થઈ`);
@@ -1829,7 +1878,7 @@
       });
       if (typ === 'In') {
         const p = activeList(state.parties).find(x => x.name.toLowerCase() === party.toLowerCase());
-        if (p) p.due = Math.max(0, (p.due || 0) - amt);
+        if (p) { p.due = Math.max(0, (p.due || 0) - amt); p.updatedAt = Date.now(); }
       }
       const nextCr = String(state.payments.length + 1).padStart(3, '0');
       document.getElementById('pay-no').value = 'RTC/CR/' + nextCr;
@@ -1870,7 +1919,7 @@
           const payObj = activeList(state.payments).find(x => x.id === id);
           if (payObj && payObj.type === 'In') {
             const party = activeList(state.parties).find(x => x.name.toLowerCase() === (payObj.party || '').toLowerCase());
-            if (party) party.due = (party.due || 0) + (Number(payObj.amount) || 0);
+            if (party) { party.due = (party.due || 0) + (Number(payObj.amount) || 0); party.updatedAt = Date.now(); }
           }
           if (payObj) { payObj.deleted = true; payObj.updatedAt = Date.now(); }
           saveState(); renderPaymentsTable(); renderAll(); showToast('પેમેન્ટ રસીદ ડિલીટ થઈ ગઈ ✔');
@@ -2024,7 +2073,9 @@
         if (amt <= 0) return showToast('કૃપા કરીને ખર્ચની રકમ લખો');
         if (!state.expenses) state.expenses = [];
         state.expenses.unshift({
-          id: Date.now(),
+          id: genId(),
+          updatedAt: Date.now(),
+          deleted: false,
           date: fmtDate(document.getElementById('exp-date').value || new Date().toISOString().slice(0, 10)),
           category: document.getElementById('exp-cat').value,
           note: document.getElementById('exp-note').value.trim(),
@@ -2036,63 +2087,280 @@
       });
     }
 
+    window._currentLedgerData = null;
+
     function openPartyLedger(partyId) {
       const p = activeList(state.parties).find(x => x.id === Number(partyId));
       if (!p) return;
       const modal = document.getElementById('party-ledger-modal');
-      document.getElementById('ledger-party-title').textContent = `📒 ${esc(p.name)} — ખાતા સ્ટેટમેન્ટ`;
-      document.getElementById('ledger-party-sub').textContent = `${p.city || 'મોટીઝેર'} • ${esc(p.phone || '-')}`;
+      document.getElementById('ledger-party-title').textContent = `📒 ${p.name} — ખાતા સ્ટેટમેન્ટ`;
+      document.getElementById('ledger-party-sub').textContent = `${p.city || 'મોટીઝેર'} • ${p.phone || '-'}`;
 
-      const entries = [];
-      activeList(state.bills).filter(b => (b.buyer || '').toLowerCase() === (p.name || '').toLowerCase() && ((b.kind || 'Sales') === 'Sales' || b.kind === 'Return')).forEach(b => {
-        if (b.kind === 'Return') {
-          entries.push({ date: b.date, desc: `માલ પરત ${esc(b.no)}${b.origBillNo ? ' (બિલ ' + b.origBillNo + ' સામે જમા)' : ''}`, debit: 0, credit: Number(b.total)||0 });
+      const pNameClean = String(p.name || '').trim().toLowerCase();
+      const pPhone10 = String(p.phone || '').replace(/[^0-9]/g, '').slice(-10);
+
+      function isSameParty(recName, recPhone) {
+        const rn = String(recName || '').trim().toLowerCase();
+        const rp10 = String(recPhone || '').replace(/[^0-9]/g, '').slice(-10);
+        if (pNameClean && rn && rn === pNameClean) return true;
+        if (pPhone10 && pPhone10.length === 10 && rp10 === pPhone10) return true;
+        return false;
+      }
+
+      const rawEntries = [];
+      activeList(state.bills).filter(b => isSameParty(b.buyer, b.phone)).forEach(b => {
+        const kind = b.kind || 'Sales';
+        const itemsTxt = (b.rows || []).map(r => `${r.desc || ''} (${r.kg || 0} Kg)`).filter(Boolean).join(', ');
+        if (kind === 'Return') {
+          rawEntries.push({
+            date: b.date,
+            ts: b.updatedAt || b.id || 0,
+            desc: `માલ પરત ${b.no}${b.origBillNo ? ' (બિલ ' + b.origBillNo + ' સામે જમા)' : ''}${itemsTxt ? ' — ' + itemsTxt : ''}`,
+            debit: 0,
+            credit: Number(b.total) || 0
+          });
+        } else if (kind === 'Purchase') {
+          rawEntries.push({
+            date: b.date,
+            ts: b.updatedAt || b.id || 0,
+            desc: `ખરીદી બિલ ${b.no} (${b.payment || 'Cash'})${itemsTxt ? ' — ' + itemsTxt : ''}`,
+            debit: b.payment === 'Credit' ? 0 : (Number(b.total) || 0),
+            credit: Number(b.total) || 0
+          });
         } else {
-          entries.push({ date: b.date, desc: `બિલ નં. ${esc(b.no)} (${esc(b.payment)})`, debit: Number(b.total)||0, credit: b.payment === 'Credit' ? 0 : (Number(b.total)||0) });
+          rawEntries.push({
+            date: b.date,
+            ts: b.updatedAt || b.id || 0,
+            desc: `વેચાણ બિલ નં. ${b.no} (${b.payment || 'Cash'})${itemsTxt ? ' — ' + itemsTxt : ''}`,
+            debit: Number(b.total) || 0,
+            credit: b.payment === 'Credit' ? 0 : (Number(b.total) || 0)
+          });
         }
       });
-      activeList(state.payments).filter(pay => (pay.party || '').toLowerCase() === (p.name || '').toLowerCase()).forEach(pay => {
-        if (pay.type === 'In') entries.push({ date: pay.date, desc: `રસીદ નં. ${pay.no} (${pay.mode})`, debit: 0, credit: Number(pay.amount)||0 });
-        else entries.push({ date: pay.date, desc: `ચૂકવણી ${pay.no} (${pay.mode})`, debit: Number(pay.amount)||0, credit: 0 });
+
+      activeList(state.payments).filter(pay => isSameParty(pay.party, '')).forEach(pay => {
+        if (pay.type === 'In') {
+          rawEntries.push({
+            date: pay.date,
+            ts: pay.updatedAt || pay.id || 0,
+            desc: `રસીદ નં. ${pay.no} (${pay.mode || 'Cash'})${pay.note ? ' - ' + pay.note : ''}`,
+            debit: 0,
+            credit: Number(pay.amount) || 0
+          });
+        } else {
+          rawEntries.push({
+            date: pay.date,
+            ts: pay.updatedAt || pay.id || 0,
+            desc: `ચૂકવણી ${pay.no} (${pay.mode || 'Cash'})${pay.note ? ' - ' + pay.note : ''}`,
+            debit: Number(pay.amount) || 0,
+            credit: 0
+          });
+        }
       });
+
+      rawEntries.sort((a, b) => {
+        const da = toISODateKey(a.date);
+        const db = toISODateKey(b.date);
+        if (da !== db) return da.localeCompare(db);
+        return (a.ts || 0) - (b.ts || 0);
+      });
+
+      const currentDue = Number(p.due || 0);
+      const sumD = rawEntries.reduce((s, e) => s + e.debit, 0);
+      const sumC = rawEntries.reduce((s, e) => s + e.credit, 0);
+      const openingGap = currentDue - (sumD - sumC);
+
+      const entries = [];
+      if (Math.abs(openingGap) >= 1) {
+        if (openingGap > 0) {
+          entries.push({
+            date: '-',
+            desc: 'અગાઉની બાકી સિલક (Opening Balance)',
+            debit: openingGap,
+            credit: 0
+          });
+        } else {
+          entries.push({
+            date: '-',
+            desc: 'અગાઉની જમા સિલક (Opening Advance)',
+            debit: 0,
+            credit: Math.abs(openingGap)
+          });
+        }
+      }
+      rawEntries.forEach(e => entries.push(e));
 
       let run = 0, totD = 0, totC = 0;
       const tb = document.getElementById('ledger-tbody');
-      tb.innerHTML = entries.length ? '' : '<tr><td colspan="5" class="p-4 text-center text-slate-400">આ પાર્ટીના કોઈ બિલ કે પેમેન્ટની નોંધ નથી.</td></tr>';
-      const waLines = [`નમસ્તે ${esc(p.name)} જી,`, `Raj Trading Company — આપનું ખાતા સ્ટેટમેન્ટ:`];
+      tb.innerHTML = entries.length ? '' : '<tr><td colspan="5" class="p-4 text-center text-slate-400">આ પાર્ટીના કોઈ બિલ કે પેમેન્ટની નોંધ નથી (ચોખ્ખું ખાતું ₹ 0).</td></tr>';
+      const waLines = [
+        `*રાજ ટ્રેડિંગ કંપની (Raj Trading Company)*`,
+        `નમસ્તે *${p.name}* જી,`,
+        `📒 *આપનું ખાતા સ્ટેટમેન્ટ:*`,
+        `--------------------------------`
+      ];
+
       entries.forEach(en => {
-        totD += en.debit; totC += en.credit;
+        totD += en.debit;
+        totC += en.credit;
         run += (en.debit - en.credit);
+        const dDisp = en.date === '-' ? '-' : fmtDate(en.date);
         tb.innerHTML += `<tr class="border-b border-slate-200">
-          <td class="p-2">${fmtDate(en.date)}</td>
-          <td class="p-2 font-semibold">${en.desc}</td>
+          <td class="p-2 whitespace-nowrap">${esc(dDisp)}</td>
+          <td class="p-2 font-semibold">${esc(en.desc)}</td>
           <td class="p-2 text-right font-bold text-amber-700">${en.debit ? '₹ ' + en.debit.toFixed(0) : '-'}</td>
           <td class="p-2 text-right font-bold text-emerald-700">${en.credit ? '₹ ' + en.credit.toFixed(0) : '-'}</td>
           <td class="p-2 text-right font-extrabold text-[#0D2C4D]">₹ ${run.toFixed(0)}</td>
         </tr>`;
-        waLines.push(`• ${fmtDate(en.date)} | ${en.desc} | ઉધાર: ₹${en.debit.toFixed(0)} | જમા: ₹${en.credit.toFixed(0)}`);
+        waLines.push(`• ${dDisp} | ${en.desc} | ઉધાર: ₹${en.debit.toFixed(0)} | જમા: ₹${en.credit.toFixed(0)} | બાકી: ₹${run.toFixed(0)}`);
       });
 
-      const currentDue = Number(p.due || 0);
       document.getElementById('ledger-tot-debit').textContent = '₹ ' + totD.toFixed(0);
       document.getElementById('ledger-tot-credit').textContent = '₹ ' + totC.toFixed(0);
       document.getElementById('ledger-tot-bal').textContent = '₹ ' + currentDue.toFixed(0);
 
-      waLines.push(`--------------------`);
+      waLines.push(`--------------------------------`);
       waLines.push(`કુલ ઉધાર: ₹${totD.toFixed(0)} | કુલ જમા: ₹${totC.toFixed(0)}`);
-      waLines.push(`*ચાલુ બાકી લેણું: ₹${currentDue.toFixed(0)}*`);
-      if (p.dueDate && currentDue > 0) waLines.push(`ઉઘરાણી તારીખ: ${fmtDate(p.dueDate)}`);
-      waLines.push(`આભાર! — Raj Trading Company`);
+      waLines.push(`*ચોખ્ખું બાકી લેણું: ₹${currentDue.toFixed(0)}*`);
+      if (p.dueDate && currentDue > 0) waLines.push(`📅 ઉઘરાણી તારીખ: ${fmtDate(p.dueDate)}`);
+      waLines.push(`પ્રોપ્રાઈટર: રાજ બારોટ | મો. +91 88662 14018`);
 
-      const cleanPh = String(p.phone || '').replace(/[^0-9]/g, '');
+      const fullWaText = waLines.join('\n');
+      const shortSmsText = `રાજ ટ્રેડિંગ કંપની: નમસ્તે ${p.name}, આપના ખાતામાં કુલ ઉધાર ₹${totD.toFixed(0)}, કુલ જમા ₹${totC.toFixed(0)} અને ચોખ્ખું બાકી લેણું ₹${currentDue.toFixed(0)} છે.${p.dueDate && currentDue > 0 ? ' ઉઘરાણી તા.: ' + fmtDate(p.dueDate) + '.' : ''} મો. 8866214018`;
+
       const waBtn = document.getElementById('ledger-wa-btn');
-      if (cleanPh) {
-        waBtn.href = `https://wa.me/91${cleanPh.slice(-10)}?text=${encodeURIComponent(waLines.join('\n'))}`;
+      if (waBtn) {
+        waBtn.href = pPhone10
+          ? `https://wa.me/91${pPhone10}?text=${encodeURIComponent(fullWaText)}`
+          : `https://wa.me/?text=${encodeURIComponent(fullWaText)}`;
         waBtn.classList.remove('hidden');
-      } else {
-        waBtn.classList.add('hidden');
       }
+
+      const smsBtn = document.getElementById('ledger-sms-btn');
+      if (smsBtn) {
+        smsBtn.href = pPhone10
+          ? `sms:+91${pPhone10}?body=${encodeURIComponent(shortSmsText)}`
+          : `sms:?body=${encodeURIComponent(shortSmsText)}`;
+        smsBtn.classList.remove('hidden');
+      }
+
+      const callBtn = document.getElementById('ledger-call-btn');
+      if (callBtn) {
+        if (pPhone10) {
+          callBtn.href = `tel:+91${pPhone10}`;
+          callBtn.classList.remove('hidden');
+        } else {
+          callBtn.classList.add('hidden');
+        }
+      }
+
+      window._currentLedgerData = { party: p, entries, totD, totC, currentDue };
       modal.classList.remove('hidden');
+    }
+
+    function printPartyLedgerStatement() {
+      const data = window._currentLedgerData;
+      if (!data) return window.print();
+      const { party: p, entries, totD, totC, currentDue } = data;
+      const pa = document.getElementById('print-area');
+      if (!pa) return window.print();
+      const origHtml = pa.innerHTML;
+      const modal = document.getElementById('party-ledger-modal');
+      if (modal) modal.classList.add('hidden');
+
+      let runBal = 0;
+      const rowsHtml = entries.length
+        ? entries.map((en, idx) => {
+            const dDisp = en.date === '-' ? '-' : fmtDate(en.date);
+            runBal += (en.debit - en.credit);
+            return `<tr>
+              <td style="border:1px solid #0D2C4D;padding:6px;text-align:center">${idx + 1}</td>
+              <td style="border:1px solid #0D2C4D;padding:6px">${esc(dDisp)}</td>
+              <td style="border:1px solid #0D2C4D;padding:6px;font-weight:600">${esc(en.desc)}</td>
+              <td style="border:1px solid #0D2C4D;padding:6px;text-align:right;color:#B45309;font-weight:700">${en.debit ? '₹ ' + en.debit.toFixed(2) : '-'}</td>
+              <td style="border:1px solid #0D2C4D;padding:6px;text-align:right;color:#166A38;font-weight:700">${en.credit ? '₹ ' + en.credit.toFixed(2) : '-'}</td>
+              <td style="border:1px solid #0D2C4D;padding:6px;text-align:right;color:#0D2C4D;font-weight:800">₹ ${runBal.toFixed(2)}</td>
+            </tr>`;
+          }).join('')
+        : `<tr><td colspan="6" style="border:1px solid #0D2C4D;padding:12px;text-align:center;color:#64748B">કોઈ વ્યવહાર નોંધાયેલ નથી</td></tr>`;
+
+      pa.innerHTML = `
+        <div style="font-family:'Noto Sans Gujarati','Inter',sans-serif;color:#0F172A;padding:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0D2C4D;padding-bottom:10px;margin-bottom:12px">
+            <div style="display:flex;gap:12px;align-items:center">
+              <img src="logo.png" alt="Logo" style="width:58px;height:58px;object-fit:contain;border:1px solid #cbd5e1;border-radius:8px;padding:2px">
+              <div>
+                <div style="font-size:20px;font-weight:800;color:#0D2C4D">રાજ ટ્રેડિંગ કંપની <span style="font-size:13px">(RAJ TRADING COMPANY)</span></div>
+                <div style="font-size:11px;font-weight:700;color:#B45309">પશુ આહાર (દાણ-ખોળ) • મકાઈ પાપડી • હાઇબ્રિડ બિયારણ ટ્રેડિંગ • એગ્રી કોમોડિટીઝ</div>
+                <div style="font-size:11px;color:#334155">મુ. પો. મોટીઝેર, દૂધની ડેરીની સામે, તા. કપડવંજ, જી. ખેડા - ૩૮૭૬૨૦ | મો.: +91 88662 14018</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="background:#0D2C4D;color:#D4AF37;padding:4px 10px;border-radius:6px;font-weight:800;font-size:12px;display:inline-block">પાર્ટી ખાતા સ્ટેટમેન્ટ (LEDGER)</div>
+              <div style="font-size:11px;margin-top:6px"><b>તારીખ:</b> ${fmtDate(new Date().toISOString().slice(0, 10))}</div>
+            </div>
+          </div>
+
+          <div style="border:1px solid #94A3B8;background:#F8FAFC;border-radius:8px;padding:10px;margin-bottom:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px">
+            <div><b>પાર્ટી / વેપારીનું નામ:</b> <span style="font-size:14px;font-weight:800;color:#0D2C4D">${esc(p.name)}</span></div>
+            <div><b>ગામ / સરનામું:</b> ${esc(p.city || 'મોટીઝેર')}</div>
+            <div><b>મોબાઈલ:</b> ${esc(p.phone || '-')}</div>
+            ${p.dueDate && currentDue > 0 ? `<div><b>ઉઘરાણી તારીખ:</b> <span style="color:#B91C1C;font-weight:700">${fmtDate(p.dueDate)}</span></div>` : ''}
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;text-align:center;font-size:12px">
+            <div style="border:1px solid #FCD34D;background:#FFFBEB;padding:8px;border-radius:8px">
+              <div style="color:#92400E;font-weight:700">કુલ ઉધાર (Total Debit)</div>
+              <div style="font-size:16px;font-weight:800;color:#B45309;margin-top:2px">₹ ${totD.toFixed(2)}</div>
+            </div>
+            <div style="border:1px solid #6EE7B7;background:#ECFDF5;padding:8px;border-radius:8px">
+              <div style="color:#065F46;font-weight:700">કુલ જમા (Total Credit)</div>
+              <div style="font-size:16px;font-weight:800;color:#047857;margin-top:2px">₹ ${totC.toFixed(2)}</div>
+            </div>
+            <div style="border:2px solid #0D2C4D;background:#FEF2F2;padding:8px;border-radius:8px">
+              <div style="color:#991B1B;font-weight:700">ચોખ્ખું બાકી લેણું (Net Due)</div>
+              <div style="font-size:16px;font-weight:800;color:#DC2626;margin-top:2px">₹ ${currentDue.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">
+            <thead>
+              <tr style="background:#E8EEF5;color:#0D2C4D">
+                <th style="border:1px solid #0D2C4D;padding:6px;width:36px">ક્રમ</th>
+                <th style="border:1px solid #0D2C4D;padding:6px;text-align:left;width:80px">તારીખ</th>
+                <th style="border:1px solid #0D2C4D;padding:6px;text-align:left">વિગત (બિલ / રસીદ / નોંધ)</th>
+                <th style="border:1px solid #0D2C4D;padding:6px;text-align:right;width:90px">ઉધાર (₹)</th>
+                <th style="border:1px solid #0D2C4D;padding:6px;text-align:right;width:90px">જમા (₹)</th>
+                <th style="border:1px solid #0D2C4D;padding:6px;text-align:right;width:95px">બાકી (₹)</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot>
+              <tr style="background:#F1F5F9;font-weight:800;color:#0D2C4D">
+                <td colspan="3" style="border:1px solid #0D2C4D;padding:7px;text-align:right">કુલ સરવાળો (Total)</td>
+                <td style="border:1px solid #0D2C4D;padding:7px;text-align:right;color:#B45309">₹ ${totD.toFixed(2)}</td>
+                <td style="border:1px solid #0D2C4D;padding:7px;text-align:right;color:#166A38">₹ ${totC.toFixed(2)}</td>
+                <td style="border:1px solid #0D2C4D;padding:7px;text-align:right;color:#DC2626">₹ ${currentDue.toFixed(2)}</td>
+              </tr>
+              <tr style="background:#FEF9C3;font-weight:800;color:#0D2C4D;font-size:12px">
+                <td colspan="3" style="border:1px solid #0D2C4D;padding:8px;text-align:right">આખર બાકી લેણું (Closing Balance Due)</td>
+                <td colspan="3" style="border:1px solid #0D2C4D;padding:8px;text-align:right;color:#DC2626">₹ ${currentDue.toFixed(2)} (${numToWords(currentDue)})</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:24px;border-top:1px solid #CBD5E1;font-size:11px;font-weight:700;color:#0D2C4D">
+            <div>પાર્ટી / ગ્રાહકની સહી: ______________________</div>
+            <div>For, RAJ TRADING COMPANY (પ્રોપ્રાઈટર: રાજ બારોટ)</div>
+          </div>
+        </div>`;
+
+      setTimeout(() => {
+        window.print();
+        pa.innerHTML = origHtml;
+        if (typeof syncPreview === 'function') syncPreview();
+        if (modal) modal.classList.remove('hidden');
+      }, 150);
     }
 
     document.addEventListener('click', e => {
@@ -2102,7 +2370,7 @@
     const closeL = document.getElementById('close-ledger-modal');
     if (closeL) closeL.addEventListener('click', () => document.getElementById('party-ledger-modal').classList.add('hidden'));
     const printL = document.getElementById('ledger-print-btn');
-    if (printL) printL.addEventListener('click', () => window.print());
+    if (printL) printL.addEventListener('click', printPartyLedgerStatement);
 
 
     function toISODateKey(d) {
@@ -2985,18 +3253,7 @@
       }
       renderExpiryAlerts();
 
-      // #3: Party Ledger WhatsApp Statement
-      document.getElementById('ledger-wa-btn')?.addEventListener('click', () => {
-        const modal = document.getElementById('party-ledger-modal');
-        if (!modal) return;
-        const title = modal.querySelector('h3')?.textContent || 'પાર્ટી ખાતાવહી';
-        const rows = Array.from(modal.querySelectorAll('tbody tr')).map(tr =>
-          Array.from(tr.children).map(td => td.textContent.trim()).join(' | ')
-        ).slice(0, 15);
-        const msg = '*' + COMP_TITLE + '*\n📒 *' + title + '*\n' + rows.join('\n') + '\nસંપર્ક: રાજ બારોટ (+91 88662 14018)';
-        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
-      });
-
+      // #3: Party Ledger WhatsApp Statement handled in openPartyLedger
       // #5: Hashed Owner & Staff PIN Lock (Required on App Open)
       const OWNER_HASH_KEY = 'rtc_owner_pin_hash_v2';
       const STAFF_HASH_KEY = 'rtc_staff_pin_hash_v2';
