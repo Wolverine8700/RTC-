@@ -1772,7 +1772,11 @@
       const q = (document.getElementById('search-bills').value || '').toLowerCase();
       const tbody = document.getElementById('saved-bills-tbody');
       tbody.innerHTML = '';
-      state.bills.filter(b => b.buyer.toLowerCase().includes(q) || b.no.toLowerCase().includes(q)).forEach(b => {
+      state.bills
+        .filter(b => (b.buyer || '').toLowerCase().includes(q) || (b.no || '').toLowerCase().includes(q))
+        .slice()
+        .sort((a, b) => (toISODateKey(b.date) || '').localeCompare(toISODateKey(a.date) || '') || ((Number(b.id) || 0) - (Number(a.id) || 0)))
+        .forEach(b => {
         tbody.innerHTML += `<tr class="border-b border-slate-200">
           <td class="p-2.5 font-bold text-[#0D2C4D]">${b.no}${b.kind==='Return' && b.origBillNo ? `<div class="text-[10px] text-rose-700 font-semibold">મૂળ બિલ: ${b.origBillNo} સામે જમા</div>` : ''}${(() => { if ((b.kind||'Sales')!=='Sales') return ''; const retSum = state.bills.filter(x => x.kind==='Return' && x.origBillNo && x.origBillNo.toLowerCase()===b.no.toLowerCase()).reduce((s,x)=>s+(Number(x.total)||0),0); return retSum>0 ? `<div class="text-[10px] text-emerald-700 font-bold">↩️ પરત જમા: ₹${retSum.toFixed(0)} | ચોખ્ખું: ₹${Math.max(0, b.total-retSum).toFixed(0)}</div>` : ''; })()}</td>
           <td class="p-2.5">${fmtDate(b.date)}</td>
@@ -1827,7 +1831,7 @@
 
       const recent = document.getElementById('recent-bills-list');
       recent.innerHTML = state.bills.length === 0 ? '<div class="text-slate-400">હજુ કોઈ બિલ સેવ કરેલ નથી. "+ નવું બિલ બનાવો" પર ક્લિક કરો.</div>' : '';
-      state.bills.slice(0, 5).forEach(b => {
+      state.bills.slice().sort((a, b) => (toISODateKey(b.date) || '').localeCompare(toISODateKey(a.date) || '') || ((Number(b.id) || 0) - (Number(a.id) || 0))).slice(0, 5).forEach(b => {
         recent.innerHTML += `<div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-200">
           <div><span class="font-bold text-[#0D2C4D]">${b.no}</span> — ${b.buyer}</div>
           <div class="font-extrabold text-[#B45309]">₹ ${b.total.toFixed(2)}</div>
@@ -2586,8 +2590,8 @@
     }
 
     function openPartyLedger(partyId) {
-      const p = state.parties.find(x => x.id === Number(partyId));
-      if (!p) return;
+      const p = (state.parties || []).find(x => String(x.id) === String(partyId));
+      if (!p) { if (typeof showToast === 'function') showToast('પાર્ટી ખાતું મળ્યું નથી'); return; }
       window.currentLedgerPartyId = p.id;
       const modal = document.getElementById('party-ledger-modal');
       document.getElementById('ledger-party-title').textContent = `📒 ${p.name} — ખાતા સ્ટેટમેન્ટ`;
@@ -2635,6 +2639,7 @@
         waBtn.classList.add('hidden');
       }
       modal.classList.remove('hidden');
+      modal.style.display = 'flex';
     }
 
     document.addEventListener('click', e => {
@@ -2663,7 +2668,7 @@
       if (lbtn) openPartyLedger(lbtn.dataset.ledgerParty);
     });
     const closeL = document.getElementById('close-ledger-modal');
-    if (closeL) closeL.addEventListener('click', () => document.getElementById('party-ledger-modal').classList.add('hidden'));
+    if (closeL) closeL.addEventListener('click', () => { const m = document.getElementById('party-ledger-modal'); m.classList.add('hidden'); m.style.display = ''; });
     const printL = document.getElementById('ledger-print-btn');
     if (printL) printL.addEventListener('click', () => window.print());
 
@@ -2680,7 +2685,7 @@
     function renderDaybook() {
       const dbInp = document.getElementById('daybook-date');
       if (!dbInp) return;
-      if (!dbInp.value) dbInp.value = new Date().toISOString().slice(0, 10);
+      if (!dbInp.value) { const _d = new Date(); dbInp.value = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; }
       const targetISO = toISODateKey(dbInp.value);
       const isBankMode = m => m && m !== 'Cash' && m !== 'Credit' && m !== 'Partial';
 
@@ -4386,6 +4391,20 @@
           else origOpen.call(window, routed, '_blank', 'noopener');
         }
       }, true);
+    })();
+  </script>
+  <script>
+    (function initDaybookDateAuto() {
+      function setToday() {
+        const inp = document.getElementById('daybook-date');
+        if (inp && !inp.value) {
+          const d = new Date();
+          inp.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+        if (typeof renderDaybook === 'function') renderDaybook();
+      }
+      setToday();
+      document.addEventListener('DOMContentLoaded', setToday);
     })();
   </script>
 </body>
