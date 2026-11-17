@@ -147,6 +147,11 @@
         <button id="pwa-install-btn" class="hidden px-2.5 py-1.5 rounded-lg bg-[#0D2C4D] text-white text-[11px] font-bold hover:bg-slate-800 shadow-sm">📲 એપ ઇન્સ્ટોલ</button>
         <span id="cloud-status-badge" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer" title="ક્લાઉડ સિંક કરો">☁️ Cloud Sync</span>
           <button id="lang-toggle" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-[#0D2C4D] hover:bg-slate-100">🌐 EN / ગુજ</button>
+        <select id="wa-app-pref" title="WhatsApp કે WhatsApp Business પસંદ કરો" class="px-2 py-1.5 rounded-lg border border-emerald-400 bg-emerald-50 text-xs font-extrabold text-emerald-900 cursor-pointer">
+          <option value="ask">💬 WA (પૂછો / Auto)</option>
+          <option value="w4b">💼 WA Business</option>
+          <option value="wa">🟢 WA સામાન્ય</option>
+        </select>
         <button id="pin-lock-btn" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-[#0D2C4D] hover:bg-slate-100">🔓 PIN લોક</button>
         <button id="quick-reports-btn" class="px-3 py-1.5 rounded-lg bg-[#0D2C4D] text-white text-xs font-bold hover:bg-slate-800 shadow-sm">📊 રિપોર્ટ</button>
         <button id="quick-new-bill" class="px-4 py-2 rounded-lg bg-[#B45309] text-white text-xs font-bold hover:bg-amber-800 shadow-sm">+ નવું બિલ બનાવો</button>
@@ -159,7 +164,8 @@
     <section id="tab-dashboard" class="tab-panel space-y-5">
       <div class="bg-gradient-to-r from-[#0D2C4D] via-[#123A63] to-[#0D2C4D] p-4 rounded-2xl shadow-md text-white">
         <div class="text-xs font-bold text-[#D4AF37] mb-2.5">ઝડપી એક્શન (Quick Actions)</div>
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
+          <button type="button" class="open-price-list-btn bg-amber-400/20 hover:bg-amber-400/30 border border-amber-300/40 rounded-xl p-2.5 text-left transition-all"><div class="text-lg">📢</div><div class="text-xs font-bold mt-1 text-[#D4AF37]">ભાવ લિસ્ટ મોકલો</div></button>
           <button data-qaction="sales" class="q-act-btn bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl p-2.5 text-left transition-all">
             <div class="text-lg">🧾</div>
             <div class="text-xs font-bold mt-1">+ વેચાણ બિલ</div>
@@ -670,6 +676,7 @@
           <button data-kfilter="all" class="khata-filter-btn px-3 py-1.5 rounded-xl bg-[#0D2C4D] text-white text-xs font-bold">બધી</button>
           <button data-kfilter="get" class="khata-filter-btn px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">🟢 લેવાના</button>
           <button data-kfilter="give" class="khata-filter-btn px-3 py-1.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold">🔴 આપવાના</button>
+          <button id="export-all-vcard-btn" title="ફક્ત માલિક માટે: બધા કોન્ટેક્ટ .vcf ફાઇલમાં ડાઉનલોડ કરો" class="owner-only-vcard px-3 py-1.5 rounded-xl bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold hover:bg-purple-200">📇 બધા કોન્ટેક્ટ (.vcf)</button>
           <button id="recalc-khata-btn" title="બિલ અને રસીદ મુજબ બધા ખાતાનું બેલેન્સ ફરી ગણો" class="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold hover:bg-amber-200">🔄 બેલેન્સ રિ-સિંક</button>
         </div>
       </div>
@@ -711,6 +718,7 @@
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="font-bold text-[#0D2C4D]" data-gu="નવી પ્રોડક્ટ / સ્ટોક ઉમેરો" data-en="Add New Product / Stock">નવી પ્રોડક્ટ / સ્ટોક ઉમેરો</h2>
+          <button type="button" class="open-price-list-btn px-3 py-1.5 rounded-xl bg-[#0D2C4D] text-[#D4AF37] text-xs font-extrabold hover:opacity-90 shadow-sm">📢 ભાવ લિસ્ટ મોકલો (WA / SMS)</button>
           <span id="item-stock-calc-hint" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg hidden"></span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -1089,19 +1097,14 @@
     const STORAGE_KEY = 'raj_trading_vyapar_v1';
     let lang = 'gu';
     let state = {
-      items: [
-        { id: 1, name: 'સ્પેશિયલ મકાઈ પાપડી (Makai Papdi)', pack: '50 Kg', rate: 34, stock: 2500 },
-        { id: 2, name: 'બેલેન્સ પશુ આહાર / દાણ', pack: '50 Kg', rate: 28, stock: 3000 },
-        { id: 3, name: 'શુદ્ધ ખાણ & ભુસું', pack: '50 Kg', rate: 30, stock: 1500 },
-        { id: 4, name: 'એગ્રી કોમોડિટીઝ (મકાઈ/ઘઉં)', pack: '50 Kg', rate: 26, stock: 2000 }
-      ],
+      items: [],
       parties: [
         { id: 1, name: 'મોટીઝેર દૂધ ઉત્પાદક મંડળી', phone: '9825011111', city: 'મોટીઝેર', due: 0 },
         { id: 2, name: 'કમલેશભાઈ પટેલ (ડેરી ફાર્મ)', phone: '9898022222', city: 'કપડવંજ', due: 6800 }
       ],
       bills: [],
       payments: [],
-      draftRows: [{ desc: 'સ્પેશિયલ મકાઈ પાપડી (Makai Papdi)', pack: '50 Kg', pkts: 2, kg: 100, rate: 34 }]
+      draftRows: [{ desc: '', pack: '', pkts: 1, kg: 0, rate: 0 }]
     };
 
     function loadState() {
@@ -1788,9 +1791,10 @@
             if (kind === 'Return') {
               const p = state.parties.find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
               if (p) p.due = (Number(p.due) || 0) + (Number(billObj.total) || 0);
-            } else if (billObj.payment === 'Credit' && (kind === 'Sales' || kind === 'Purchase')) {
+            } else if ((billObj.payment === 'Credit' || billObj.payment === 'Partial') && (kind === 'Sales' || kind === 'Purchase')) {
               const p = state.parties.find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
-              if (p) p.due = (Number(p.due) || 0) + (kind === 'Purchase' ? (Number(billObj.total) || 0) : -(Number(billObj.total) || 0));
+              const revAmt = billObj.payment === 'Partial' ? Number(billObj.dueAmount ?? billObj.total ?? 0) : (Number(billObj.total) || 0);
+              if (p) p.due = (Number(p.due) || 0) + (kind === 'Purchase' ? revAmt : -revAmt);
             }
             (billObj.rows || []).forEach(r => {
               const it = state.items.find(x => x.name === r.desc);
@@ -2140,18 +2144,20 @@
       const amt = Number(document.getElementById('pay-amount').value) || 0;
       if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
       const typ = document.getElementById('pay-type').value;
-      state.payments.unshift({
+      const entry = {
         id: Date.now(),
-        no: document.getElementById('pay-no').value,
+        no: document.getElementById('pay-no').value.trim(),
         date: fmtDate(document.getElementById('pay-date').value),
-        type: typ,
-        party,
+        type: typ, party,
         mode: document.getElementById('pay-mode').value,
-        note: document.getElementById('pay-note').value,
+        note: document.getElementById('pay-note').value.trim(),
         amount: amt
-      });
+      };
+      const matchedCashBill = isReceiptForCashBill(entry);
+      if (matchedCashBill) entry.forCashBill = true;
+      state.payments.unshift(entry);
       const payPartyObj = state.parties.find(x => x.name.toLowerCase() === party.toLowerCase());
-      if (payPartyObj) {
+      if (payPartyObj && !matchedCashBill) {
         if (typ === 'In') payPartyObj.due = (Number(payPartyObj.due) || 0) - amt;
         else payPartyObj.due = (Number(payPartyObj.due) || 0) + amt;
       }
@@ -2362,6 +2368,26 @@
       });
     }
 
+    function isReceiptForCashBill(pay) {
+      if (!pay) return false;
+      if (pay.forCashBill === true) return true;
+      if (pay.forCashBill === false) return false;
+      const pISO = toISODateKey(pay.date);
+      const pAmt = Number(pay.amount) || 0;
+      const pParty = String(pay.party || '').trim().toLowerCase();
+      const pMode = String(pay.mode || 'Cash');
+      return (state.bills || []).some(b => {
+        const k = b.kind || 'Sales';
+        const matchKind = (pay.type === 'In' && k === 'Sales') || (pay.type === 'Out' && k === 'Purchase');
+        return matchKind
+          && b.payment !== 'Credit' && b.payment !== 'Partial'
+          && toISODateKey(b.date) === pISO
+          && Math.abs((Number(b.total) || 0) - pAmt) < 0.01
+          && String(b.buyer || '').trim().toLowerCase() === pParty
+          && b.payment === pMode;
+      });
+    }
+
     function buildPartyLedgerData(p) {
       const entries = [];
       state.bills.filter(b => (b.buyer || '').toLowerCase() === (p.name || '').toLowerCase()).forEach(b => {
@@ -2371,13 +2397,16 @@
           entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `માલ પરત ${b.no}${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: 0, credit: Number(b.total)||0 });
         } else if (k === 'Purchase') {
           const tot = Number(b.total) || 0;
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: b.payment === 'Credit' ? 0 : tot, credit: tot });
+          const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
         } else {
           const tot = Number(b.total) || 0;
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `વેચાણ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: tot, credit: b.payment === 'Credit' ? 0 : tot });
+          const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `વેચાણ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
         }
       });
       (state.payments || []).filter(pay => (pay.party || '').toLowerCase() === (p.name || '').toLowerCase()).forEach(pay => {
+        if (isReceiptForCashBill(pay)) return; // Already settled on the Cash/Bank bill row
         if (pay.type === 'In') entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), desc: `પૈસા જમા (રસીદ ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: 0, credit: Number(pay.amount)||0 });
         else entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), desc: `ચૂકવણી (વાઉચર ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: Number(pay.amount)||0, credit: 0 });
       });
@@ -2655,6 +2684,25 @@
       const targetISO = toISODateKey(dbInp.value);
       const isBankMode = m => m && m !== 'Cash' && m !== 'Credit' && m !== 'Partial';
 
+      function isDuplicateCashBillReceipt(p, bills) {
+        if (!p || p.forCashBill === true) return true;
+        if (p.forCashBill === false) return false;
+        // Auto-detect legacy receipt created for a same-day, same-party, same-amount Cash/Bank bill
+        const pISO = toISODateKey(p.date);
+        const pAmt = Number(p.amount) || 0;
+        const pParty = String(p.party || '').trim().toLowerCase();
+        const pMode = String(p.mode || 'Cash');
+        return bills.some(b => {
+          const k = b.kind || 'Sales';
+          const matchKind = (p.type === 'In' && k === 'Sales') || (p.type === 'Out' && k === 'Purchase');
+          return matchKind
+            && toISODateKey(b.date) === pISO
+            && Math.abs((Number(b.total) || 0) - pAmt) < 0.01
+            && String(b.buyer || '').trim().toLowerCase() === pParty
+            && b.payment === pMode;
+        });
+      }
+
       function calcDayTotals(filterFn) {
         const bills = state.bills || [];
         const pays = state.payments || [];
@@ -2665,9 +2713,9 @@
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
         const cRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'Return' && b.payment === 'Cash')
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
-        const cIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && p.mode === 'Cash')
+        const cIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && p.mode === 'Cash' && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        const cOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && p.mode === 'Cash')
+        const cOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && p.mode === 'Cash' && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
         const cExp = exps.filter(x => filterFn(toISODateKey(x.date)))
           .reduce((s, x) => s + (Number(x.amount) || 0), 0);
@@ -2678,15 +2726,12 @@
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
         const bRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'Return' && isBankMode(b.payment))
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
-        const bIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && isBankMode(p.mode))
+        const bIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && isBankMode(p.mode) && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        const bOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && isBankMode(p.mode))
+        const bOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && isBankMode(p.mode) && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
-        return {
-          cSales, cIn, cOut: cPur + cRet + cOutPay + cExp,
-          bSales, bIn, bOut: bPur + bRet + bOutPay
-        };
+        return { cSales, cIn, cOut: cPur + cRet + cOutPay + cExp, bSales, bIn, bOut: bPur + bRet + bOutPay };
       }
 
       const prev = calcDayTotals(iso => iso && iso < targetISO);
@@ -3569,6 +3614,9 @@
       function updatePinUI() {
         const btn = document.getElementById('pin-lock-btn');
         if (btn) btn.textContent = staffLocked ? '🔒 સ્ટાફ મોડ (Locked)' : '🔓 PIN લોક';
+        document.querySelectorAll('.owner-only-vcard').forEach(el => {
+          el.classList.toggle('hidden', !!staffLocked);
+        });
       }
       document.getElementById('pin-lock-btn')?.addEventListener('click', () => {
         const saved = localStorage.getItem(PIN_KEY) || '';
@@ -3975,6 +4023,369 @@
         }
         showToast(`રસીદ ${recNo} (₹${amt}) ઓટોમેટિક સેવ થઈ ગઈ ✔`);
       });
+    })();
+    document.getElementById('bill-rate-type')?.addEventListener('change', () => {
+      const tier = document.getElementById('bill-rate-type').value;
+      let changed = false;
+      (state.draftRows || []).forEach(r => {
+        const it = (state.items || []).find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
+        if (it) {
+          const ws = Number(it.wholesaleRate);
+          r.rate = (tier === 'wholesale' && ws > 0) ? ws : (Number(it.rate) || 0);
+          changed = true;
+        }
+      });
+      if (changed) { renderBillRows(); showToast(tier === 'wholesale' ? 'હોલસેલ ભાવ લાગુ થયા ✔' : 'રિટેલ ભાવ લાગુ થયા ✔'); }
+    });
+  </script>
+  <!-- ONE-CLICK PRICE LIST SENDER MODAL -->
+  <div id="price-list-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+    <div class="bg-white rounded-2xl border-2 border-[#0D2C4D] shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="bg-[#0D2C4D] text-white px-5 py-3.5 flex items-center justify-between">
+        <div>
+          <div class="font-extrabold text-sm text-[#D4AF37]">📢 વન-ક્લિક પ્રાઈઝ લિસ્ટ (WhatsApp / SMS / PNG)</div>
+          <div class="text-xs text-slate-200 mt-0.5">RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની)</div>
+        </div>
+        <button id="close-pl-modal" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold">✕</button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3 flex-1">
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" data-pl-tier="retail" class="pl-tier-btn py-2 px-2 rounded-xl border-2 border-[#0D2C4D] bg-[#0D2C4D] text-white text-xs font-extrabold">👨‍🌾 કસ્ટમર (રિટેલ)</button>
+          <button type="button" data-pl-tier="wholesale" class="pl-tier-btn py-2 px-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">🏪 ડીલર (હોલસેલ)</button>
+          <button type="button" data-pl-tier="both" class="pl-tier-btn py-2 px-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">📋 બંને ભાવ</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">પાર્ટી / ડીલર પસંદ કરો</label>
+            <select id="pl-party-sel" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50"></select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 mb-1">મોબાઈલ નંબર (WhatsApp / SMS)</label>
+            <input id="pl-phone" type="tel" placeholder="10 અંકનો મોબાઈલ નં." class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
+          </div>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-[#0D2C4D]">સ્ટોકમાંથી પ્રોડક્ટ પસંદ કરો</span>
+            <label class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 cursor-pointer">
+              <input id="pl-select-all" type="checkbox" checked class="w-4 h-4 accent-emerald-600"> બધી પસંદ કરો
+            </label>
+          </div>
+          <div id="pl-prod-list" class="max-h-40 overflow-y-auto divide-y divide-slate-200 bg-white rounded-lg border border-slate-200 px-2"></div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 mb-1">મેસેજ પ્રિવ્યૂ (જરૂર મુજબ એડિટ કરી શકો છો)</label>
+          <textarea id="pl-msg-preview" rows="7" class="w-full border border-slate-300 bg-slate-50 rounded-xl p-2.5 text-xs leading-relaxed font-semibold text-slate-800"></textarea>
+        </div>
+      </div>
+
+      <div class="p-3.5 bg-slate-50 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <a id="pl-wa-btn" href="#" target="_blank" class="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold">💬 WhatsApp</a>
+        <a id="pl-sms-btn" href="#" class="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold">📩 SMS ટેક્સ્ટ</a>
+        <button id="pl-copy-btn" type="button" class="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-extrabold">📋 કોપી</button>
+        <button id="pl-png-btn" type="button" class="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold">📸 PNG ફોટો</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function setupPriceListSender() {
+      let plTier = 'retail';
+      let plSelectedIds = new Set();
+
+      function renderPLParties() {
+        const sel = document.getElementById('pl-party-sel');
+        if (!sel) return;
+        const parties = state.parties || [];
+        sel.innerHTML = '<option value="">📢 બધા ગ્રાહકો / ગ્રુપ (ફક્ત કોપી કે પસંદગી)</option>' +
+          parties.map(p => `<option value="${String(p.phone || '').replace(/[^0-9]/g, '')}">${p.name} (${p.phone || 'નં. નથી'})</option>`).join('');
+      }
+
+      function renderPLProducts() {
+        const box = document.getElementById('pl-prod-list');
+        if (!box) return;
+        const items = state.items || [];
+        if (items.length === 0) {
+          box.innerHTML = '<div class="p-3 text-center text-xs text-slate-400 font-semibold">સ્ટોકમાં હજુ કોઈ પ્રોડક્ટ ઉમેરેલ નથી. પહેલા સ્ટોક ટેબમાં પ્રોડક્ટ ઉમેરો.</div>';
+          return;
+        }
+        box.innerHTML = '';
+        items.forEach(it => {
+          const chk = plSelectedIds.has(it.id);
+          const ws = (Number(it.wholesaleRate) > 0) ? Number(it.wholesaleRate) : Number(it.rate || 0);
+          box.innerHTML += `<label class="flex items-center justify-between gap-2 py-2 px-1 cursor-pointer hover:bg-slate-50">
+            <div class="flex items-center gap-2 min-w-0">
+              <input type="checkbox" data-pl-id="${it.id}" ${chk ? 'checked' : ''} class="pl-prod-chk w-4 h-4 accent-[#0D2C4D]">
+              <div class="truncate">
+                <span class="font-bold text-xs text-[#0D2C4D]">${it.name}</span>
+                <span class="text-[11px] text-slate-500 ml-1">(${it.pack || '1 Kg'})</span>
+              </div>
+            </div>
+            <div class="text-right text-[11px] flex-shrink-0">
+              <span class="font-bold text-emerald-700">રિટેલ ₹${it.rate || 0}</span>
+              <span class="text-slate-300 mx-1">|</span>
+              <span class="font-bold text-blue-700">ડીલર ₹${ws}</span>
+            </div>
+          </label>`;
+        });
+        document.querySelectorAll('.pl-prod-chk').forEach(c => {
+          c.addEventListener('change', e => {
+            const id = Number(e.target.dataset.plId);
+            if (e.target.checked) plSelectedIds.add(id);
+            else plSelectedIds.delete(id);
+            buildPLMessage();
+          });
+        });
+      }
+
+      function buildPLMessage() {
+        const items = (state.items || []).filter(it => plSelectedIds.has(it.id));
+        const today = fmtDate(new Date().toISOString().slice(0, 10));
+        const tierLabel = plTier === 'retail' ? 'કસ્ટમર ભાવ લિસ્ટ' : (plTier === 'wholesale' ? 'ડીલર (હોલસેલ) ભાવ લિસ્ટ' : 'રિટેલ & ડીલર ભાવ લિસ્ટ');
+        const lines = [
+          '🌾 *RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની)*',
+          `📋 *${tierLabel}* (તા. ${today})`,
+          '──────────────────'
+        ];
+        if (items.length === 0) {
+          lines.push('(કૃપા કરીને પ્રોડક્ટ પસંદ કરો)');
+        } else {
+          items.forEach((it, idx) => {
+            const pNum = typeof parsePackNum === 'function' ? parsePackNum(it.pack) : (parseFloat(it.pack) || 1);
+            const rt = Number(it.rate) || 0;
+            const ws = (Number(it.wholesaleRate) > 0) ? Number(it.wholesaleRate) : rt;
+            if (plTier === 'retail') {
+              lines.push(`${idx + 1}. *${it.name}* (${it.pack || '1 Kg'}) — *₹${rt}/Kg* (બેગ: ₹${(rt * pNum).toFixed(0)})`);
+            } else if (plTier === 'wholesale') {
+              lines.push(`${idx + 1}. *${it.name}* (${it.pack || '1 Kg'}) — *₹${ws}/Kg* (બેગ: ₹${(ws * pNum).toFixed(0)})`);
+            } else {
+              lines.push(`${idx + 1}. *${it.name}* (${it.pack || '1 Kg'}) — રિટેલ: ₹${rt}/Kg | ડીલર: ₹${ws}/Kg`);
+            }
+          });
+        }
+        lines.push('──────────────────');
+        lines.push('📍 મુ. પો. મોટીઝેર, તા. કપડવંજ, જી. ખેડા');
+        lines.push('📞 ઓર્ડર માટે કોલ/મેસેજ: +91 88662 14018');
+        lines.push('🙏 આભાર!');
+        document.getElementById('pl-msg-preview').value = lines.join('\n');
+        updatePLLinks();
+      }
+
+      function updatePLLinks() {
+        const msg = document.getElementById('pl-msg-preview').value;
+        const ph = String(document.getElementById('pl-phone').value || '').replace(/[^0-9]/g, '');
+        const enc = encodeURIComponent(msg);
+        document.getElementById('pl-wa-btn').href = ph ? `https://wa.me/91${ph.slice(-10)}?text=${enc}` : `https://wa.me/?text=${enc}`;
+        document.getElementById('pl-sms-btn').href = ph ? `sms:+91${ph.slice(-10)}?body=${enc}` : `sms:?body=${enc}`;
+      }
+
+      window.openPriceListModal = function() {
+        plSelectedIds = new Set((state.items || []).map(it => it.id));
+        const sa = document.getElementById('pl-select-all');
+        if (sa) sa.checked = true;
+        renderPLParties();
+        renderPLProducts();
+        buildPLMessage();
+        document.getElementById('price-list-modal').classList.remove('hidden');
+      };
+
+      document.addEventListener('click', e => {
+        if (e.target.closest('.open-price-list-btn')) openPriceListModal();
+      });
+      document.getElementById('close-pl-modal')?.addEventListener('click', () => {
+        document.getElementById('price-list-modal').classList.add('hidden');
+      });
+      document.querySelectorAll('.pl-tier-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          plTier = btn.dataset.plTier;
+          document.querySelectorAll('.pl-tier-btn').forEach(b => {
+            b.className = 'pl-tier-btn py-2 px-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold';
+          });
+          btn.className = 'pl-tier-btn py-2 px-2 rounded-xl border-2 border-[#0D2C4D] bg-[#0D2C4D] text-white text-xs font-extrabold';
+          buildPLMessage();
+        });
+      });
+      document.getElementById('pl-party-sel')?.addEventListener('change', e => {
+        document.getElementById('pl-phone').value = e.target.value || '';
+        updatePLLinks();
+      });
+      document.getElementById('pl-phone')?.addEventListener('input', updatePLLinks);
+      document.getElementById('pl-msg-preview')?.addEventListener('input', updatePLLinks);
+      document.getElementById('pl-select-all')?.addEventListener('change', e => {
+        if (e.target.checked) plSelectedIds = new Set((state.items || []).map(it => it.id));
+        else plSelectedIds.clear();
+        renderPLProducts();
+        buildPLMessage();
+      });
+      document.getElementById('pl-copy-btn')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText(document.getElementById('pl-msg-preview').value);
+        showToast('📋 પ્રાઈઝ લિસ્ટ મેસેજ કોપી થયો ✔');
+      });
+      document.getElementById('pl-png-btn')?.addEventListener('click', () => {
+        const items = (state.items || []).filter(it => plSelectedIds.has(it.id));
+        const W = 820, rowH = 44, H = 190 + Math.max(1, items.length) * rowH + 70;
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#0D2C4D'; ctx.fillRect(0, 0, W, 92);
+        ctx.fillStyle = '#D4AF37'; ctx.font = 'bold 24px "Noto Sans Gujarati", sans-serif';
+        ctx.fillText('RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની)', 26, 38);
+        ctx.fillStyle = '#E2E8F0'; ctx.font = '14px "Noto Sans Gujarati", sans-serif';
+        ctx.fillText(`તા. ${fmtDate(new Date().toISOString().slice(0,10))} | મુ. પો. મોટીઝેર | +91 88662 14018`, 26, 68);
+        ctx.fillStyle = '#0D2C4D'; ctx.fillRect(24, 110, W - 48, 38);
+        ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 13px "Noto Sans Gujarati", sans-serif';
+        ctx.fillText('પ્રોડક્ટનું નામ', 38, 134);
+        ctx.fillText('પેકિંગ', 430, 134);
+        ctx.textAlign = 'right';
+        ctx.fillText(plTier === 'wholesale' ? 'ડીલર ભાવ' : (plTier === 'both' ? 'રિટેલ | ડીલર' : 'રિટેલ ભાવ'), W - 38, 134);
+        ctx.textAlign = 'left';
+        items.forEach((it, i) => {
+          const y = 148 + i * rowH;
+          ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+          ctx.fillRect(24, y, W - 48, rowH);
+          ctx.fillStyle = '#0F172A'; ctx.font = 'bold 14px "Noto Sans Gujarati", sans-serif';
+          ctx.fillText(String(it.name || '').slice(0, 34), 38, y + 27);
+          ctx.fillStyle = '#475569'; ctx.font = '13px "Noto Sans Gujarati", sans-serif';
+          ctx.fillText(String(it.pack || '-'), 430, y + 27);
+          const rt = Number(it.rate) || 0;
+          const ws = (Number(it.wholesaleRate) > 0) ? Number(it.wholesaleRate) : rt;
+          const pNum = typeof parsePackNum === 'function' ? parsePackNum(it.pack) : (parseFloat(it.pack) || 1);
+          ctx.textAlign = 'right'; ctx.fillStyle = '#047857'; ctx.font = 'bold 14px "Noto Sans Gujarati", sans-serif';
+          const rTxt = plTier === 'wholesale' ? `₹${ws}/Kg (₹${(ws*pNum).toFixed(0)})` : (plTier === 'both' ? `₹${rt} | ₹${ws}/Kg` : `₹${rt}/Kg (₹${(rt*pNum).toFixed(0)})`);
+          ctx.fillText(rTxt, W - 38, y + 27);
+          ctx.textAlign = 'left';
+        });
+        ctx.fillStyle = '#64748B'; ctx.font = '13px "Noto Sans Gujarati", sans-serif';
+        ctx.fillText('ઓર્ડર માટે સંપર્ક કરો: +91 88662 14018', 26, H - 24);
+        cv.toBlob(async (blob) => {
+          if (!blob) return;
+          const file = new File([blob], 'RTC_Price_List.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], title: 'RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની) — ભાવ લિસ્ટ' }); return; } catch(err) {}
+          }
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+          a.download = 'RTC_Price_List.png'; a.click();
+          showToast('📸 પ્રાઈઝ લિસ્ટ PNG ફોટો ડાઉનલોડ થયો ✔');
+        }, 'image/png');
+      });
+    })();
+  </script>
+  <script>
+    (function setupOwnerVCardExport() {
+      document.getElementById('export-all-vcard-btn')?.addEventListener('click', () => {
+        if (typeof staffLocked !== 'undefined' && staffLocked) {
+          if (typeof showToast === 'function') showToast('🔒 આ સુવિધા ફક્ત માલિક માટે જ ઉપલબ્ધ છે!');
+          return;
+        }
+        const map = new Map();
+        (state.parties || []).forEach(p => {
+          const ph = String(p.phone || '').replace(/[^0-9+]/g, '');
+          if (ph.length >= 10) {
+            const key = ph.slice(-10);
+            if (!map.has(key)) map.set(key, { name: p.name || 'Customer', phone: ph, city: p.city || '' });
+          }
+        });
+        (state.bills || []).forEach(b => {
+          const ph = String(b.phone || '').replace(/[^0-9+]/g, '');
+          if (ph.length >= 10) {
+            const key = ph.slice(-10);
+            if (!map.has(key)) map.set(key, { name: b.buyer || 'Customer', phone: ph, city: '' });
+          }
+        });
+        if (map.size === 0) {
+          if (typeof showToast === 'function') showToast('ડાઉનલોડ કરવા માટે કોઈ મોબાઈલ નંબર વાળા કોન્ટેક્ટ મળ્યા નથી');
+          return;
+        }
+        const vcards = [];
+        map.forEach(c => {
+          const cleanName = String(c.name).replace(/[\r\n;]/g, ' ').trim();
+          const cleanCity = String(c.city || '').replace(/[\r\n;]/g, ' ').trim();
+          const tel = c.phone.startsWith('+') ? c.phone : (c.phone.length === 10 ? '+91' + c.phone : c.phone);
+          vcards.push([
+            'BEGIN:VCARD',
+            'VERSION:3.0',
+            `FN;CHARSET=UTF-8:${cleanName}`,
+            `N;CHARSET=UTF-8:;${cleanName};;;`,
+            `ORG;CHARSET=UTF-8:Raj Trading Company`,
+            `TEL;TYPE=CELL:${tel}`,
+            cleanCity ? `ADR;TYPE=HOME;CHARSET=UTF-8:;;${cleanCity};;;;` : '',
+            'END:VCARD'
+          ].filter(Boolean).join('\r\n'));
+        });
+        const blob = new Blob([vcards.join('\r\n')], { type: 'text/vcard;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Raj_Trading_All_Contacts.vcf';
+        a.click();
+        if (typeof showToast === 'function') showToast(`📇 ${map.size} કોન્ટેક્ટ્સ એક જ .vcf ફાઇલમાં ડાઉનલોડ થયા ✔`);
+      });
+    })();
+  </script>
+  <script>
+    (function setupWhatsAppBusinessRouter() {
+      const WA_PREF_KEY = 'rtc_wa_pref';
+      const sel = document.getElementById('wa-app-pref');
+      if (sel) {
+        sel.value = localStorage.getItem(WA_PREF_KEY) || 'w4b';
+        sel.addEventListener('change', () => {
+          localStorage.setItem(WA_PREF_KEY, sel.value);
+          if (typeof showToast === 'function') {
+            const lbl = sel.value === 'w4b' ? '💼 WhatsApp Business સેટ થયું ✔' : (sel.value === 'wa' ? '🟢 સામાન્ય WhatsApp સેટ થયું ✔' : '💬 WhatsApp પૂછો (Auto) સેટ થયું ✔');
+            showToast(lbl);
+          }
+        });
+      }
+
+      function buildTargetUrl(rawUrl) {
+        try {
+          const u = new URL(rawUrl, location.href);
+          if (!/wa\.me|api\.whatsapp\.com/i.test(u.hostname)) return rawUrl;
+          const pref = localStorage.getItem(WA_PREF_KEY) || 'w4b';
+          const isAndroid = /Android/i.test(navigator.userAgent || '');
+          let phone = (u.searchParams.get('phone') || '').replace(/[^0-9]/g, '');
+          if (!phone && /wa\.me/i.test(u.hostname)) {
+            phone = u.pathname.replace(/[^0-9]/g, '');
+          }
+          const text = u.searchParams.get('text') || '';
+          const encText = encodeURIComponent(text);
+
+          if (isAndroid && (pref === 'w4b' || pref === 'wa')) {
+            const pkg = pref === 'w4b' ? 'com.whatsapp.w4b' : 'com.whatsapp';
+            const fb = encodeURIComponent(`https://api.whatsapp.com/send?${phone ? 'phone=' + phone + '&' : ''}text=${encText}`);
+            return `intent://send?${phone ? 'phone=' + phone + '&' : ''}text=${encText}#Intent;scheme=whatsapp;package=${pkg};S.browser_fallback_url=${fb};end`;
+          }
+          return `https://api.whatsapp.com/send?${phone ? 'phone=' + phone + '&' : ''}text=${encText}`;
+        } catch (err) {
+          return rawUrl;
+        }
+      }
+
+      const origOpen = window.open;
+      window.open = function(url, target, features) {
+        if (typeof url === 'string' && /wa\.me|api\.whatsapp\.com/i.test(url)) {
+          const routed = buildTargetUrl(url);
+          if (routed.startsWith('intent://')) {
+            location.href = routed;
+            return null;
+          }
+          return origOpen.call(window, routed, target || '_blank', features || 'noopener');
+        }
+        return origOpen.apply(window, arguments);
+      };
+
+      document.addEventListener('click', function(e) {
+        const a = e.target.closest('a[href]');
+        if (!a) return;
+        const href = a.getAttribute('href') || '';
+        if (/wa\.me|api\.whatsapp\.com/i.test(href)) {
+          e.preventDefault();
+          const routed = buildTargetUrl(href);
+          if (routed.startsWith('intent://')) location.href = routed;
+          else origOpen.call(window, routed, '_blank', 'noopener');
+        }
+      }, true);
     })();
   </script>
 </body>
