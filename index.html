@@ -90,6 +90,12 @@
     }
     .rounded-2xl { transition: box-shadow 0.2s ease, transform 0.2s ease; }
   </style>
+  <style id="rojmel-print-css">
+    @media print {
+      body.printing-rojmel > *:not(#rojmel-print-sheet) { display: none !important; }
+      body.printing-rojmel #rojmel-print-sheet { display: block !important; position: static !important; width: 100% !important; background: #fff !important; color: #000 !important; padding: 12px !important; }
+    }
+  </style>
 </head>
 <body class="min-h-screen w-full flex flex-col md:flex-row pb-24 md:pb-0">
 
@@ -1149,7 +1155,9 @@
         if (data && Array.isArray(data.bills)) {
           let hasPending = false;
           try { hasPending = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch (e) {}
-          if (hasPending) {
+          const localTs = Number((state && state._lastModified) || 0);
+          const cloudTs = Number(data._lastModified || 0);
+          if (hasPending || (silent && localTs > cloudTs && cloudTs > 0)) {
             await pushToCloudNow(true);
             return;
           }
@@ -1205,6 +1213,7 @@
 
     function saveState() {
       try {
+        if (state && typeof state === 'object') state._lastModified = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         if (isAutoCloudEnabled()) localStorage.setItem(PENDING_SYNC_KEY, '1');
       } catch (e) {}
@@ -1809,8 +1818,8 @@
               }
             });
           }
-          state.bills = state.bills.filter(b => b.id !== id);
-          saveState(); renderAll(); if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncPreview(); } showToast('બિલ ડિલીટ થયું અને સ્ટોક/ખાતું અપડેટ થયું ✔');
+          state.bills = state.bills.filter(b => String(b.id) !== String(id));
+          saveState(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true); renderAll(); if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncPreview(); } showToast('બિલ ડિલીટ થયું અને સ્ટોક/ખાતું અપડેટ થયું ✔');
         });
       });
     }
@@ -2040,8 +2049,8 @@
             setTimeout(() => { if (document.body.contains(el)) renderAll(); }, 3000);
             return;
           }
-          state.parties = state.parties.filter(x => x.id !== id);
-          saveState();
+          state.parties = state.parties.filter(x => String(x.id) !== String(id));
+          saveState(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
           renderAll();
           showToast(`${p.name} પાર્ટી ડિલીટ થઈ ✔`);
         });
@@ -2104,8 +2113,8 @@
       });
       document.querySelectorAll('.del-item').forEach(btn => {
         btn.addEventListener('click', e => {
-          state.items = state.items.filter(x => x.id !== Number(e.target.dataset.delItem));
-          saveState(); renderAll();
+          state.items = state.items.filter(x => String(x.id) !== String(e.target.dataset.delItem));
+          saveState(); renderAll(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
         });
       });
       renderBillsTable();
@@ -2679,6 +2688,10 @@
       if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
       const p = s.split(/[-/]/);
       if (p.length === 3 && p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+      const dt = new Date(s);
+      if (!isNaN(dt.getTime())) {
+        return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      }
       return s;
     }
 
@@ -2740,7 +2753,8 @@
       }
 
       const prev = calcDayTotals(iso => iso && iso < targetISO);
-      const openingCash = prev.cSales + prev.cIn - prev.cOut;
+      const baseCash = Number(state.openingCashBase || 0);
+      const openingCash = baseCash + prev.cSales + prev.cIn - prev.cOut;
       const openingBank = prev.bSales + prev.bIn - prev.bOut;
       const cur = calcDayTotals(iso => iso === targetISO);
       const closingCash = openingCash + cur.cSales + cur.cIn - cur.cOut;
@@ -4405,6 +4419,92 @@
       }
       setToday();
       document.addEventListener('DOMContentLoaded', setToday);
+    })();
+  </script>
+  <div id="rojmel-print-sheet" class="hidden"></div>
+  <script>
+    (function fixRojmelPrintAndBaseCash() {
+      // 1. Add ✏️ Opening Cash Base button on #db-opening-cash card
+      const opCard = document.getElementById('db-opening-cash')?.parentElement;
+      if (opCard && !document.getElementById('edit-base-cash-btn')) {
+        const btn = document.createElement('button');
+        btn.id = 'edit-base-cash-btn';
+        btn.type = 'button';
+        btn.className = 'mt-1 text-[10px] font-bold text-indigo-700 underline hover:text-indigo-900';
+        btn.textContent = '✏️ શરૂઆતની સિલક સેટ કરો';
+        const ed = document.createElement('div');
+        ed.className = 'hidden mt-1.5 flex items-center justify-center gap-1';
+        ed.innerHTML = `<input id="base-cash-inp" type="number" step="1" class="w-20 border border-indigo-300 rounded px-1.5 py-0.5 text-xs font-bold text-center" value="${Number(state.openingCashBase || 0)}"><button id="base-cash-save" type="button" class="px-2 py-0.5 rounded bg-indigo-700 text-white text-[10px] font-bold">✔</button>`;
+        btn.addEventListener('click', () => {
+          const inp = ed.querySelector('#base-cash-inp');
+          if (inp) inp.value = String(Number(state.openingCashBase || 0));
+          ed.classList.toggle('hidden');
+        });
+        ed.querySelector('#base-cash-save')?.addEventListener('click', () => {
+          const num = parseFloat(ed.querySelector('#base-cash-inp')?.value || '0');
+          if (isNaN(num)) { showToast('સાચી રકમ લખો'); return; }
+          state.openingCashBase = num;
+          ed.classList.add('hidden');
+          saveState();
+          if (typeof pushToCloudNow === 'function') pushToCloudNow(false);
+          if (typeof renderDaybook === 'function') renderDaybook();
+          showToast('શરૂઆતની સિલક સેટ થઈ ગઈ ✔');
+        });
+        opCard.appendChild(btn);
+        opCard.appendChild(ed);
+      }
+
+      // 2. Replace #print-daybook-btn handler with standalone #rojmel-print-sheet print
+      const pBtn = document.getElementById('print-daybook-btn');
+      if (pBtn) {
+        const fresh = pBtn.cloneNode(true);
+        pBtn.parentNode.replaceChild(fresh, pBtn);
+        fresh.addEventListener('click', () => {
+          const sheet = document.getElementById('rojmel-print-sheet');
+          if (!sheet) return window.print();
+          const dt = document.getElementById('daybook-date')?.value || '';
+          const op = document.getElementById('db-opening-cash')?.innerText || '₹ 0';
+          const cs = document.getElementById('db-cash-sales')?.innerText || '₹ 0';
+          const ci = document.getElementById('db-cash-in')?.innerText || '₹ 0';
+          const co = document.getElementById('db-cash-out')?.innerText || '₹ 0';
+          const cl = document.getElementById('db-net-cash')?.innerText || '₹ 0';
+          const bk = document.getElementById('db-bank-bal')?.innerText || '₹ 0';
+          const targetISO = typeof toISODateKey === 'function' ? toISODateKey(dt) : dt;
+
+          const dayBills = (state.bills || []).filter(b => (typeof toISODateKey === 'function' ? toISODateKey(b.date) : b.date) === targetISO);
+          const dayPays = (state.payments || []).filter(p => (typeof toISODateKey === 'function' ? toISODateKey(p.date) : p.date) === targetISO);
+          const dayExps = (state.expenses || []).filter(x => (typeof toISODateKey === 'function' ? toISODateKey(x.date) : x.date) === targetISO);
+
+          const rowsHtml = [
+            ...dayBills.map(b => `<tr><td style="padding:6px;border:1px solid #cbd5e1">${b.no || ''} (${b.kind || 'Sales'})</td><td style="padding:6px;border:1px solid #cbd5e1">${b.buyer || '-'}</td><td style="padding:6px;border:1px solid #cbd5e1">${b.payment || ''}</td><td style="padding:6px;border:1px solid #cbd5e1;text-align:right">₹ ${Number(b.total||0).toFixed(0)}</td></tr>`),
+            ...dayPays.map(p => `<tr><td style="padding:6px;border:1px solid #cbd5e1">${p.no || ''} (${p.type === 'In' ? 'જમા' : 'ચૂકવણી'})</td><td style="padding:6px;border:1px solid #cbd5e1">${p.party || '-'}</td><td style="padding:6px;border:1px solid #cbd5e1">${p.mode || ''}</td><td style="padding:6px;border:1px solid #cbd5e1;text-align:right">₹ ${Number(p.amount||0).toFixed(0)}</td></tr>`),
+            ...dayExps.map(x => `<tr><td style="padding:6px;border:1px solid #cbd5e1">ખર્ચ (${x.category || 'Expense'})</td><td style="padding:6px;border:1px solid #cbd5e1">${x.note || '-'}</td><td style="padding:6px;border:1px solid #cbd5e1">Cash</td><td style="padding:6px;border:1px solid #cbd5e1;text-align:right">₹ ${Number(x.amount||0).toFixed(0)}</td></tr>`)
+          ].join('') || '<tr><td colspan="4" style="padding:10px;border:1px solid #cbd5e1;text-align:center;color:#64748b">આ તારીખે કોઈ નોંધ નથી</td></tr>';
+
+          sheet.innerHTML = `<div style="font-family:'Noto Sans Gujarati',sans-serif;max-width:760px;margin:0 auto">
+            <h2 style="margin:0 0 4px;color:#0D2C4D;font-size:20px">Raj Trading Company — દૈનિક રોજમેળ અને સિલક</h2>
+            <div style="font-size:12px;color:#475569;margin-bottom:12px">તારીખ: <b>${typeof fmtDate === 'function' ? fmtDate(dt) : dt}</b></div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+              <tr><td style="padding:7px;border:1px solid #cbd5e1">આગલી સિલક (Opening Cash)</td><td style="padding:7px;border:1px solid #cbd5e1;text-align:right"><b>${op}</b></td></tr>
+              <tr><td style="padding:7px;border:1px solid #cbd5e1">રોકડ વેચાણ (Cash Sales)</td><td style="padding:7px;border:1px solid #cbd5e1;text-align:right"><b>${cs}</b></td></tr>
+              <tr><td style="padding:7px;border:1px solid #cbd5e1">ઉધાર જમા (Cash In)</td><td style="padding:7px;border:1px solid #cbd5e1;text-align:right"><b>${ci}</b></td></tr>
+              <tr><td style="padding:7px;border:1px solid #cbd5e1">ખરીદી + પરત + ખર્ચ (Out)</td><td style="padding:7px;border:1px solid #cbd5e1;text-align:right"><b>${co}</b></td></tr>
+              <tr style="background:#FEF3C7"><td style="padding:8px;border:1px solid #cbd5e1"><b>આખર રોકડ સિલક (Closing Cash)</b></td><td style="padding:8px;border:1px solid #cbd5e1;text-align:right"><b>${cl}</b></td></tr>
+              <tr><td style="padding:7px;border:1px solid #cbd5e1">આખર બેંક / UPI સિલક</td><td style="padding:7px;border:1px solid #cbd5e1;text-align:right"><b>${bk}</b></td></tr>
+            </table>
+            <h3 style="margin:0 0 6px;color:#0D2C4D;font-size:14px">આજના વ્યવહારોની વિગત</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr style="background:#0D2C4D;color:#fff"><th style="padding:6px;text-align:left">નં / પ્રકાર</th><th style="padding:6px;text-align:left">પાર્ટી / વિગત</th><th style="padding:6px;text-align:left">મોડ</th><th style="padding:6px;text-align:right">રકમ</th></tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>`;
+
+          document.body.classList.add('printing-rojmel');
+          const cleanup = () => { document.body.classList.remove('printing-rojmel'); };
+          window.addEventListener('afterprint', cleanup, { once: true });
+          setTimeout(() => { window.print(); setTimeout(cleanup, 1200); }, 100);
+        });
+      }
     })();
   </script>
 </body>
