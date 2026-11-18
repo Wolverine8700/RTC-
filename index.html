@@ -3611,15 +3611,29 @@
   </script>
 
   <!-- PIN Lock Modal -->
-  <div id="pin-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+  <div id="pin-modal" class="hidden fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-        <h3 id="pin-modal-title" class="font-extrabold text-sm text-[#0D2C4D]">🔒 4-અંકનો PIN લોક</h3>
-        <button id="close-pin-modal" class="text-slate-400 font-bold px-2">✕</button>
+        <h3 id="pin-modal-title" class="font-extrabold text-sm text-[#0D2C4D]">🔒 એપ લોગીન (PIN)</h3>
+        <button id="close-pin-modal" type="button" class="text-slate-400 font-bold px-2">✕</button>
       </div>
-      <p id="pin-modal-desc" class="text-xs text-slate-600">સ્ટાફ મોડ માટે 4-અંકનો PIN દાખલ કરો.</p>
-      <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center text-lg font-extrabold tracking-widest">
-      <button id="pin-submit-btn" class="w-full px-4 py-2 rounded-xl bg-[#0D2C4D] text-white text-xs font-bold">કન્ફર્મ કરો ✔</button>
+      <p id="pin-modal-desc" class="text-xs text-slate-600">એડમિન અથવા સ્ટાફનો 4-અંકનો PIN દાખલ કરો.</p>
+      <div id="pin-login-fields" class="space-y-2.5">
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center text-lg font-extrabold tracking-widest">
+        <button id="pin-submit-btn" type="button" class="w-full px-4 py-2 rounded-xl bg-[#0D2C4D] text-white text-xs font-bold">લોગીન કરો ✔</button>
+        <button id="pin-manage-btn" type="button" class="hidden w-full px-3 py-1.5 rounded-xl bg-slate-100 text-[#0D2C4D] text-[11px] font-bold">⚙️ એડમિન / સ્ટાફ PIN બદલો</button>
+      </div>
+      <div id="pin-setup-fields" class="hidden space-y-2.5">
+        <div>
+          <label class="block text-[11px] font-bold text-[#0D2C4D] mb-1">👑 માલિક (Admin) PIN — 4 અંક</label>
+          <input id="pin-admin-setup-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center text-base font-extrabold tracking-widest">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">👤 સ્ટાફ (Staff) PIN — 4 અંક</label>
+          <input id="pin-staff-setup-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center text-base font-extrabold tracking-widest">
+        </div>
+        <button id="pin-setup-save-btn" type="button" class="w-full px-4 py-2 rounded-xl bg-[#0D2C4D] text-white text-xs font-bold">બંને PIN સેવ કરો ✔</button>
+      </div>
     </div>
   </div>
 
@@ -3665,58 +3679,142 @@
         window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
       });
 
-      // #5: 4-Digit PIN Lock (Staff Mode)
+      // #5: Dual 4-Digit Admin & Staff PIN Login
+      const STAFF_PIN_KEY = "rtc_staff_pin_v1";
+      let appUnlocked = false;
+      function normPinDigits(v) {
+        const map = {'૦':'0','૧':'1','૨':'2','૩':'3','૪':'4','૫':'5','૬':'6','૭':'7','૮':'8','૯':'9','०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9'};
+        return String(v || '').replace(/[૦-૯०-९]/g, ch => map[ch] || ch).trim();
+      }
       function updatePinUI() {
         const btn = document.getElementById('pin-lock-btn');
-        if (btn) btn.textContent = staffLocked ? '🔒 સ્ટાફ મોડ (Locked)' : '🔓 PIN લોક';
+        if (btn) btn.textContent = staffLocked ? '👤 સ્ટાફ લોગીન (Locked)' : '👑 એડમિન લોગીન';
         document.querySelectorAll('.owner-only-vcard').forEach(el => {
           el.classList.toggle('hidden', !!staffLocked);
         });
+        if (staffLocked) {
+          const repPanel = document.getElementById('tab-reports');
+          if (repPanel && !repPanel.classList.contains('hidden') && typeof switchTab === 'function') {
+            switchTab('tab-home');
+          }
+        }
       }
-      document.getElementById('pin-lock-btn')?.addEventListener('click', () => {
-        const saved = localStorage.getItem(PIN_KEY) || '';
-        document.getElementById('pin-input').value = '';
-        if (!saved) {
-          document.getElementById('pin-modal-title').textContent = '🔒 નવો 4-અંકનો PIN સેટ કરો';
-          document.getElementById('pin-modal-desc').textContent = 'રિપોર્ટ્સ અને ડિલીટ સુરક્ષિત રાખવા 4 અંકનો PIN લખો.';
-        } else if (staffLocked) {
-          document.getElementById('pin-modal-title').textContent = '🔓 એડમિન અનલોક (PIN લખો)';
-          document.getElementById('pin-modal-desc').textContent = 'અનલોક કરવા તમારો 4-અંકનો PIN લખો.';
-        } else {
-          staffLocked = true;
-          updatePinUI();
-          if (typeof showToast === 'function') showToast('સ્ટાફ મોડ લોક થયો 🔒');
+      function openPinSetupMode(canClose) {
+        const modal = document.getElementById('pin-modal');
+        const loginBox = document.getElementById('pin-login-fields');
+        const setupBox = document.getElementById('pin-setup-fields');
+        const closeBtn = document.getElementById('close-pin-modal');
+        const titleEl = document.getElementById('pin-modal-title');
+        const descEl = document.getElementById('pin-modal-desc');
+        const aInp = document.getElementById('pin-admin-setup-input');
+        const sInp = document.getElementById('pin-staff-setup-input');
+        if (loginBox) loginBox.classList.add('hidden');
+        if (setupBox) setupBox.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = '⚙️ એડમિન & સ્ટાફ PIN સેટ કરો';
+        if (descEl) descEl.textContent = 'માલિક (Admin) અને સ્ટાફ (Staff) માટે અલગ 4-અંકના PIN સેટ કરો.';
+        if (aInp) aInp.value = '';
+        if (sInp) sInp.value = '';
+        if (closeBtn) closeBtn.classList.toggle('hidden', !canClose);
+        if (modal) modal.classList.remove('hidden');
+        setTimeout(() => { try { aInp && aInp.focus(); } catch (e) {} }, 80);
+      }
+      function openStartupOrUnlockModal(isStartup) {
+        let savedAdmin = '';
+        try { savedAdmin = localStorage.getItem(PIN_KEY) || ''; } catch (e) {}
+        if (!savedAdmin) {
+          openPinSetupMode(false);
           return;
         }
-        document.getElementById('pin-modal')?.classList.remove('hidden');
+        const modal = document.getElementById('pin-modal');
+        const loginBox = document.getElementById('pin-login-fields');
+        const setupBox = document.getElementById('pin-setup-fields');
+        const inp = document.getElementById('pin-input');
+        const closeBtn = document.getElementById('close-pin-modal');
+        const manageBtn = document.getElementById('pin-manage-btn');
+        const titleEl = document.getElementById('pin-modal-title');
+        const descEl = document.getElementById('pin-modal-desc');
+        if (setupBox) setupBox.classList.add('hidden');
+        if (loginBox) loginBox.classList.remove('hidden');
+        if (inp) inp.value = '';
+        if (titleEl) titleEl.textContent = staffLocked && appUnlocked ? '👑 એડમિન લોગીન (PIN લખો)' : '🔒 એપ લોગીન (PIN લખો)';
+        if (descEl) descEl.textContent = 'માલિક (Admin) માટે Admin PIN અને સ્ટાફ માટે Staff PIN દાખલ કરો.';
+        if (closeBtn) closeBtn.classList.toggle('hidden', !appUnlocked || !!isStartup);
+        if (manageBtn) manageBtn.classList.toggle('hidden', !(appUnlocked && !staffLocked));
+        if (modal) modal.classList.remove('hidden');
+        setTimeout(() => { try { inp && inp.focus(); } catch (e) {} }, 80);
+      }
+      document.getElementById('pin-lock-btn')?.addEventListener('click', () => {
+        openStartupOrUnlockModal(false);
       });
-      document.getElementById('close-pin-modal')?.addEventListener('click', () => document.getElementById('pin-modal')?.classList.add('hidden'));
-      document.getElementById('pin-submit-btn')?.addEventListener('click', () => {
-        const val = (document.getElementById('pin-input')?.value || '').trim();
+      document.getElementById('pin-manage-btn')?.addEventListener('click', () => {
+        if (!appUnlocked || staffLocked) return;
+        openPinSetupMode(true);
+      });
+      document.getElementById('close-pin-modal')?.addEventListener('click', () => {
+        if (!appUnlocked) return;
+        document.getElementById('pin-modal')?.classList.add('hidden');
+      });
+      function saveDualPinsHandler() {
+        const aVal = normPinDigits(document.getElementById('pin-admin-setup-input')?.value || '');
+        const sVal = normPinDigits(document.getElementById('pin-staff-setup-input')?.value || '');
+        if (!/^\d{4}$/.test(aVal)) return showToast('માલિક (Admin) નો 4 અંકનો PIN લખો!');
+        if (sVal && !/^\d{4}$/.test(sVal)) return showToast('સ્ટાફ PIN 4 અંકનો લખો!');
+        if (sVal && sVal === aVal) return showToast('Admin અને Staff PIN અલગ-અલગ રાખો!');
+        try {
+          localStorage.setItem(PIN_KEY, aVal);
+          if (sVal) localStorage.setItem(STAFF_PIN_KEY, sVal);
+          else localStorage.removeItem(STAFF_PIN_KEY);
+        } catch (e) {}
+        appUnlocked = true;
+        staffLocked = false;
+        updatePinUI();
+        document.getElementById('pin-modal')?.classList.add('hidden');
+        showToast('👑 Admin PIN & સ્ટાફ PIN સેવ થઈ ગયા ✔');
+      }
+      function submitPinHandler() {
+        const inp = document.getElementById('pin-input');
+        const val = normPinDigits(inp ? inp.value : '');
         if (!/^\d{4}$/.test(val)) return showToast('4 અંકનો નંબર લખો!');
-        const saved = localStorage.getItem(PIN_KEY) || '';
-        if (!saved) {
-          localStorage.setItem(PIN_KEY, val);
-          staffLocked = true;
-          updatePinUI();
-          document.getElementById('pin-modal')?.classList.add('hidden');
-          showToast('PIN સેટ થઈ ગયો અને સ્ટાફ મોડ ચાલુ 🔒');
-        } else if (val === saved) {
+        let savedAdmin = '';
+        let savedStaff = '';
+        try {
+          savedAdmin = localStorage.getItem(PIN_KEY) || '';
+          savedStaff = localStorage.getItem(STAFF_PIN_KEY) || '';
+        } catch (e) {}
+        if (val === savedAdmin) {
+          appUnlocked = true;
           staffLocked = false;
           updatePinUI();
           document.getElementById('pin-modal')?.classList.add('hidden');
-          showToast('એડમિન મોડ અનલોક થયો 🔓');
+          showToast('👑 માલિક (Admin) લોગીન થયું ✔');
+        } else if (savedStaff && val === savedStaff) {
+          appUnlocked = true;
+          staffLocked = true;
+          updatePinUI();
+          document.getElementById('pin-modal')?.classList.add('hidden');
+          showToast('👤 સ્ટાફ લોગીન થયું 🔒');
         } else {
+          if (inp) { inp.value = ''; inp.focus(); }
           showToast('ખોટો PIN!');
         }
+      }
+      document.getElementById('pin-submit-btn')?.addEventListener('click', submitPinHandler);
+      document.getElementById('pin-setup-save-btn')?.addEventListener('click', saveDualPinsHandler);
+      document.getElementById('pin-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submitPinHandler(); }
       });
+      document.getElementById('pin-staff-setup-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); saveDualPinsHandler(); }
+      });
+      // Always ask for Admin or Staff PIN when opening the app
+      openStartupOrUnlockModal(true);
       document.addEventListener('click', e => {
         if (!staffLocked) return;
-        const tBtn = e.target.closest('[data-tab="reports"], #quick-reports-btn, .del-bill, .del-pay, .del-item, .del-party');
+        const tBtn = e.target.closest('[data-tab="reports"], #quick-reports-btn, .del-bill, .del-pay, .del-item, .del-party, .del-exp');
         if (tBtn) {
           e.preventDefault();
           e.stopPropagation();
-          showToast('🔒 સ્ટાફ મોડમાં આ વિકલ્પ લોક છે — ઉપર PIN અનલોક કરો');
+          showToast('🔒 સ્ટાફ લોગીનમાં આ વિકલ્પ લોક છે — Admin PIN થી લોગીન કરો');
         }
       }, true);
     })();
