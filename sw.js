@@ -1,16 +1,24 @@
-const CACHE_NAME = 'billing-pwa-v20';
+const CACHE_NAME = 'rtc-billing-pwa-v31';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png'
 ];
+// Cross-origin scripts the app needs to render (Tailwind CSS) - cached so the app also works offline
+const CDN_CACHE_HOSTS = ['cdn.tailwindcss.com'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME).then(async c => {
+      await Promise.all(ASSETS.map(a => c.add(a).catch(() => {})));
+      // Pre-cache Tailwind (opaque response is fine for <script src>)
+      await c.add(new Request('https://cdn.tailwindcss.com/3.4.17', { mode: 'no-cors' })).catch(() => {});
+    })
   );
 });
 
@@ -23,20 +31,36 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  const url = e.request.url || '';
-  if (url.includes('script.google.com') || url.includes('fonts.googleapis.com')) {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // Never cache Google Apps Script (live data) or Google Fonts CSS
+  if (url.hostname === 'script.google.com' || url.hostname === 'script.googleusercontent.com' ||
+      url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     return;
   }
+  const isCdn = CDN_CACHE_HOSTS.includes(url.hostname);
+  const isSameOrigin = url.origin === self.location.origin;
+  if (!isCdn && !isSameOrigin) return;
+
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then(res => {
-        if (res && res.status === 200 && res.type === 'basic') {
+        const cacheable = res && ((isSameOrigin && res.status === 200 && res.type === 'basic') ||
+                                  (isCdn && (res.status === 200 || res.type === 'opaque')));
+        if (cacheable) {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, copy)).catch(() => {});
+          caches.open(CACHE_NAME).then(c => c.put(req, copy)).catch(() => {});
         }
         return res;
       })
-      .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
+      .catch(() =>
+        caches.match(req, { ignoreSearch: true }).then(r => {
+          if (r) return r;
+          // Only page navigations fall back to index.html (not images/scripts)
+          if (req.mode === 'navigate') return caches.match('./index.html');
+          return Response.error();
+        })
+      )
   );
 });
