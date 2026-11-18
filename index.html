@@ -1166,9 +1166,14 @@
             await pushToCloudNow(true);
             return;
           }
+          const _prevDraft = (state && Array.isArray(state.draftRows) && state.draftRows.length) ? state.draftRows : [{ desc: '', pack: '50 Kg', pkts: 1, kg: 50, rate: 0 }];
           state = data;
-          if (!state.payments) state.payments = [];
-          if (!state.expenses) state.expenses = [];
+          if (!Array.isArray(state.bills)) state.bills = [];
+          if (!Array.isArray(state.items)) state.items = [];
+          if (!Array.isArray(state.parties)) state.parties = [];
+          if (!Array.isArray(state.payments)) state.payments = [];
+          if (!Array.isArray(state.expenses)) state.expenses = [];
+          if (!Array.isArray(state.draftRows) || !state.draftRows.length) state.draftRows = _prevDraft;
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
           renderAll();
           if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncPreview(); syncReceiptPreview(); }
@@ -1619,11 +1624,17 @@
     }
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
+      if (!Array.isArray(state.draftRows)) state.draftRows = [];
       state.draftRows.push({ desc: '', pack: '50 Kg', pkts: 1, kg: 50, rate: 0 });
       renderBillRows();
     });
 
     document.getElementById('save-bill-btn').addEventListener('click', () => {
+      if (!Array.isArray(state.draftRows)) state.draftRows = [];
+      if (!Array.isArray(state.bills)) state.bills = [];
+      if (!Array.isArray(state.parties)) state.parties = [];
+      if (!Array.isArray(state.payments)) state.payments = [];
+      if (!Array.isArray(state.items)) state.items = [];
       const buyer = document.getElementById('buyer-name').value.trim() || 'રોકડ ગ્રાહક';
       const total = state.draftRows.reduce((s, r) => s + (Number(r.kg)||0)*(Number(r.rate)||0), 0);
       const pay = document.getElementById('bill-payment').value;
@@ -1653,11 +1664,11 @@
         bill.partialMode = partialMode;
       }
       if (kind === 'Return') {
-        let p = state.parties.find(x => x.name.toLowerCase() === buyer.toLowerCase());
+        let p = state.parties.find(x => String(x.name || '').toLowerCase() === buyer.toLowerCase());
         if (p) { p.due = (Number(p.due)||0) - total; }
       } else if ((pay === 'Credit' || pay === 'Partial') && (kind === 'Sales' || kind === 'Purchase')) {
         const remDue = pay === 'Partial' ? Math.max(0, total - paidNow) : total;
-        let p = state.parties.find(x => x.name.toLowerCase() === buyer.toLowerCase());
+        let p = state.parties.find(x => String(x.name || '').toLowerCase() === buyer.toLowerCase());
         if (!p) {
           p = { id: Date.now(), name: buyer, phone: bill.phone, city: document.getElementById('buyer-addr').value, due: 0, dueDate: '' };
           state.parties.push(p);
@@ -1685,11 +1696,12 @@
       if (document.getElementById('bill-partial-box')) document.getElementById('bill-partial-box').classList.add('hidden');
       if (document.getElementById('bill-collection-date')) document.getElementById('bill-collection-date').value = '';
       state.draftRows.forEach(r => {
-        const it = state.items.find(x => x.name === r.desc);
+        const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
         if (it) {
           const qty = Number(r.kg)||0;
           const delta = (kind === 'Purchase' || kind === 'Return') ? qty : -qty;
           it.stock = Math.max(0, (Number(it.stock)||0) + delta);
+          it.updatedAt = Date.now();
         }
       });
       if (document.getElementById('bill-orig-no')) document.getElementById('bill-orig-no').value = '';
@@ -1809,19 +1821,20 @@
           if (billObj) {
             const kind = billObj.kind || 'Sales';
             if (kind === 'Return') {
-              const p = state.parties.find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
+              const p = state.parties.find(x => String(x.name || '').toLowerCase() === (billObj.buyer || '').toLowerCase());
               if (p) p.due = (Number(p.due) || 0) + (Number(billObj.total) || 0);
             } else if ((billObj.payment === 'Credit' || billObj.payment === 'Partial') && (kind === 'Sales' || kind === 'Purchase')) {
-              const p = state.parties.find(x => x.name.toLowerCase() === (billObj.buyer || '').toLowerCase());
+              const p = state.parties.find(x => String(x.name || '').toLowerCase() === (billObj.buyer || '').toLowerCase());
               const revAmt = billObj.payment === 'Partial' ? Number(billObj.dueAmount ?? billObj.total ?? 0) : (Number(billObj.total) || 0);
               if (p) p.due = (Number(p.due) || 0) + (kind === 'Purchase' ? revAmt : -revAmt);
             }
             (billObj.rows || []).forEach(r => {
-              const it = state.items.find(x => x.name === r.desc);
+              const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
               if (it) {
                 const qty = Number(r.kg)||0;
                 const rev = (kind === 'Purchase' || kind === 'Return') ? -qty : qty;
                 it.stock = Math.max(0, (Number(it.stock)||0) + rev);
+                it.updatedAt = Date.now();
               }
             });
           }
@@ -2160,6 +2173,8 @@
     });
 
     document.getElementById('save-pay-btn').addEventListener('click', () => {
+      if (!Array.isArray(state.payments)) state.payments = [];
+      if (!Array.isArray(state.parties)) state.parties = [];
       const party = document.getElementById('pay-party').value.trim() || 'રોકડ પાર્ટી';
       const amt = Number(document.getElementById('pay-amount').value) || 0;
       if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
@@ -2176,7 +2191,7 @@
       const matchedCashBill = isReceiptForCashBill(entry);
       if (matchedCashBill) entry.forCashBill = true;
       state.payments.unshift(entry);
-      const payPartyObj = state.parties.find(x => x.name.toLowerCase() === party.toLowerCase());
+      const payPartyObj = state.parties.find(x => String(x.name || '').toLowerCase() === party.toLowerCase());
       if (payPartyObj && !matchedCashBill) {
         if (typ === 'In') payPartyObj.due = (Number(payPartyObj.due) || 0) - amt;
         else payPartyObj.due = (Number(payPartyObj.due) || 0) + amt;
@@ -2218,7 +2233,7 @@
           const id = Number(e.target.dataset.delPay);
           const payObj = (state.payments || []).find(x => x.id === id);
           if (payObj) {
-            const party = state.parties.find(x => x.name.toLowerCase() === (payObj.party || '').toLowerCase());
+            const party = state.parties.find(x => String(x.name || '').toLowerCase() === (payObj.party || '').toLowerCase());
             if (party) {
               if (payObj.type === 'In') party.due = (Number(party.due) || 0) + (Number(payObj.amount) || 0);
               else party.due = (Number(party.due) || 0) - (Number(payObj.amount) || 0);
@@ -2787,7 +2802,7 @@
       rTypeEl.addEventListener('change', () => {
         const isWs = rTypeEl.value === 'wholesale';
         state.draftRows.forEach(r => {
-          const it = state.items.find(x => x.name === r.desc);
+          const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
           if (it) {
             const ws = Number(it.wholesaleRate);
             r.rate = (isWs && ws > 0) ? ws : (Number(it.rate) || 0);
@@ -3384,7 +3399,8 @@
         const idx = e.target.value;
         if (idx === '') return;
         const it = (state.items || [])[Number(idx)];
-        if (!it || !Array.isArray(state.draftRows)) return;
+        if (!it) return;
+        if (!Array.isArray(state.draftRows)) state.draftRows = [];
         const rateTier = document.getElementById('bill-rate-type')?.value || 'retail';
         const chosenRate = rateTier === 'wholesale' ? (Number(it.wholesaleRate) || Number(it.rate) || 0) : (Number(it.rate) || 0);
         const packMatch = String(it.pack || '').match(/([0-9.]+)/);
@@ -3561,7 +3577,7 @@
         if (oldIdx !== -1) {
           const ob = state.bills[oldIdx];
           (ob.rows || []).forEach(r => {
-            const it = (state.items || []).find(x => x.name === r.desc);
+            const it = (state.items || []).find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
             if (it) {
               if ((ob.kind || 'Sales') === 'Purchase' || ob.kind === 'Return') it.stock = Math.max(0, (Number(it.stock)||0) - (Number(r.kg)||0));
               else it.stock = (Number(it.stock)||0) + (Number(r.kg)||0);
