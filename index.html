@@ -2380,43 +2380,7 @@
       const n = parseFloat(cleaned);
       return isNaN(n) ? 0 : n;
     }
-    const addExpBtn = document.getElementById('add-exp-btn');
-    if (addExpBtn && !addExpBtn.dataset.wired) {
-      addExpBtn.dataset.wired = '1';
-      addExpBtn.addEventListener('click', () => {
-        const amtInp = document.getElementById('exp-amt');
-        const noteInp = document.getElementById('exp-note');
-        const dateInp = document.getElementById('exp-date');
-        const catInp = document.getElementById('exp-cat');
-        const amt = parseLocaleNum(amtInp ? amtInp.value : 0);
-        if (amt <= 0) return showToast('કૃપા કરીને ખર્ચની રકમ લખો');
-        if (!Array.isArray(state.expenses)) state.expenses = [];
-        const catVal = (catInp && catInp.value) ? catInp.value : 'અન્ય ખર્ચ';
-        const rawDate = (dateInp && dateInp.value) ? dateInp.value : new Date().toISOString().slice(0, 10);
-        state.expenses.unshift({
-          id: Date.now(),
-          updatedAt: Date.now(),
-          deleted: false,
-          date: fmtDate(rawDate),
-          category: catVal,
-          cat: catVal,
-          title: catVal,
-          note: noteInp ? noteInp.value.trim() : '',
-          amount: amt
-        });
-        if (noteInp) noteInp.value = '';
-        if (amtInp) amtInp.value = '';
-        saveState();
-        try { renderReports(); } catch (e) {}
-        try { renderAll(); } catch (e) {}
-        try { if (typeof renderDaybook === 'function') renderDaybook(); } catch (e) {}
-        try { if (typeof pushToCloudNow === 'function') pushToCloudNow(true); } catch (e) {}
-        showToast('દુકાનનો ખર્ચ સેવ થઈ ગયો ✔');
-      });
-      document.getElementById('exp-amt')?.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); addExpBtn.click(); }
-      });
-    }
+    // Handled by #expense-btn-guaranteed-fix
 
     function isReceiptForCashBill(pay) {
       if (!pay) return false;
@@ -4925,6 +4889,70 @@
           CLOSEABLE_MODALS.forEach(hideModal);
         }
       });
+    })();
+  </script>
+  <script id="expense-btn-guaranteed-fix">
+    (function () {
+      function parseExpNum(val) {
+        const map = {'૦':'0','૧':'1','૨':'2','૩':'3','૪':'4','૫':'5','૬':'6','૭':'7','૮':'8','૯':'9','०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9'};
+        const cleaned = String(val || '').replace(/[૦-૯०-९]/g, ch => map[ch] || ch).replace(/[^0-9.-]/g, '');
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? 0 : n;
+      }
+      function getTodayISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      function handleAddExpense() {
+        const amtInp = document.getElementById('exp-amt');
+        const noteInp = document.getElementById('exp-note');
+        const dateInp = document.getElementById('exp-date');
+        const catInp = document.getElementById('exp-cat');
+        if (dateInp && !dateInp.value) dateInp.value = getTodayISO();
+        const amt = parseExpNum(amtInp ? amtInp.value : 0);
+        if (amt <= 0) {
+          if (typeof showToast === 'function') showToast('કૃપા કરીને ખર્ચની રકમ લખો');
+          if (amtInp) amtInp.focus();
+          return;
+        }
+        if (typeof state === 'undefined' || !state) return;
+        if (!Array.isArray(state.expenses)) state.expenses = [];
+        const catVal = (catInp && catInp.value) ? catInp.value : 'અન્ય ખર્ચ';
+        const rawDate = (dateInp && dateInp.value) ? dateInp.value : getTodayISO();
+        const fDate = (typeof fmtDate === 'function') ? fmtDate(rawDate) : rawDate;
+        state.expenses.unshift({
+          id: Date.now(),
+          updatedAt: Date.now(),
+          deleted: false,
+          date: fDate,
+          category: catVal,
+          cat: catVal,
+          title: catVal,
+          note: noteInp ? noteInp.value.trim() : '',
+          amount: amt
+        });
+        if (noteInp) noteInp.value = '';
+        if (amtInp) amtInp.value = '';
+        try { if (typeof saveState === 'function') saveState(); } catch (e) {}
+        try { if (typeof STORAGE_KEY !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        try { if (typeof renderReports === 'function') renderReports(); } catch (e) {}
+        try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
+        try { if (typeof renderDaybook === 'function') renderDaybook(); } catch (e) {}
+        try { if (typeof pushToCloudNow === 'function') pushToCloudNow(true); } catch (e) {}
+        if (typeof showToast === 'function') showToast('દુકાનનો ખર્ચ સેવ થઈ ગયો ✔');
+      }
+      document.addEventListener('click', function (e) {
+        if (e.target && e.target.closest('#add-exp-btn')) {
+          e.preventDefault();
+          handleAddExpense();
+        }
+      }, true);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target && e.target.id === 'exp-amt') {
+          e.preventDefault();
+          handleAddExpense();
+        }
+      }, true);
     })();
   </script>
 </body>
