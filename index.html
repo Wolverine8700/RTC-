@@ -159,6 +159,7 @@
           <option value="wa">🟢 WA સામાન્ય</option>
         </select>
         <button id="pin-lock-btn" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-[#0D2C4D] hover:bg-slate-100">🔓 PIN લોક</button>
+        <button id="pin-change-header-btn" class="hidden px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-bold text-[#0D2C4D] hover:bg-amber-100">🔑 PIN બદલો</button>
         <button id="quick-reports-btn" class="px-3 py-1.5 rounded-lg bg-[#0D2C4D] text-white text-xs font-bold hover:bg-slate-800 shadow-sm">📊 રિપોર્ટ</button>
         <button id="quick-new-bill" class="px-4 py-2 rounded-lg bg-[#B45309] text-white text-xs font-bold hover:bg-amber-800 shadow-sm">+ નવું બિલ બનાવો</button>
       </div>
@@ -2683,7 +2684,7 @@
       } else {
         waBtn.classList.add('hidden');
       }
-      modal.classList.remove('hidden');
+      modal.classList.remove('hidden'); modal.style.display = 'flex';
       modal.style.display = 'flex';
     }
 
@@ -2713,7 +2714,7 @@
       if (lbtn) openPartyLedger(lbtn.dataset.ledgerParty, lbtn.dataset.ledgerName);
     });
     const closeL = document.getElementById('close-ledger-modal');
-    if (closeL) closeL.addEventListener('click', () => { const m = document.getElementById('party-ledger-modal'); m.classList.add('hidden'); m.style.display = ''; });
+    if (closeL) closeL.addEventListener('click', () => { const m = document.getElementById('party-ledger-modal'); if (m) { m.classList.add('hidden'); m.style.display = 'none'; } });
     const printL = document.getElementById('ledger-print-btn');
     if (printL) printL.addEventListener('click', () => window.print());
 
@@ -3038,10 +3039,10 @@
       if (inp) inp.value = getCloudUrl();
       if (tog) tog.checked = isAutoCloudEnabled();
       if (st) st.textContent = lastCloudSyncTime ? ('છેલ્લો સિંક: ' + lastCloudSyncTime) : 'દરેક ફેરફાર તરત Google Sheet માં સેવ થાય છે';
-      if (m) m.classList.remove('hidden');
+      if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
     }
     document.getElementById('close-cloud-modal')?.addEventListener('click', () => {
-      document.getElementById('cloud-modal')?.classList.add('hidden');
+      const _cm = document.getElementById('cloud-modal'); if (_cm) { _cm.classList.add('hidden'); _cm.style.display = 'none'; }
     });
     document.getElementById('auto-cloud-toggle')?.addEventListener('change', (e) => {
       try { localStorage.setItem(AUTO_SYNC_KEY, e.target.checked ? '1' : '0'); } catch (err) {}
@@ -3198,14 +3199,14 @@
               <li><b>iPhone Safari:</b> નીચે <b>Share (⬆️)</b> બટન દબાવો → <b>"Add to Home Screen"</b> પસંદ કરો.</li>
             </ol>`;
         }
-        modal.classList.remove('hidden');
+        modal.classList.remove('hidden'); modal.style.display = 'flex';
       });
 
       document.getElementById('close-install-modal')?.addEventListener('click', () => {
-        document.getElementById('install-help-modal')?.classList.add('hidden');
+        const _im = document.getElementById('install-help-modal'); if (_im) { _im.classList.add('hidden'); _im.style.display = 'none'; }
       });
       document.getElementById('install-help-ok')?.addEventListener('click', () => {
-        document.getElementById('install-help-modal')?.classList.add('hidden');
+        const _im = document.getElementById('install-help-modal'); if (_im) { _im.classList.add('hidden'); _im.style.display = 'none'; }
       });
     })();
 
@@ -3621,7 +3622,7 @@
       <div id="pin-login-fields" class="space-y-2.5">
         <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center text-lg font-extrabold tracking-widest">
         <button id="pin-submit-btn" type="button" class="w-full px-4 py-2 rounded-xl bg-[#0D2C4D] text-white text-xs font-bold">લોગીન કરો ✔</button>
-        <button id="pin-manage-btn" type="button" class="hidden w-full px-3 py-1.5 rounded-xl bg-slate-100 text-[#0D2C4D] text-[11px] font-bold">⚙️ એડમિન / સ્ટાફ PIN બદલો</button>
+        <button id="pin-manage-btn" type="button" class="hidden w-full px-3 py-2 rounded-xl bg-amber-100 border border-amber-300 text-[#0D2C4D] text-xs font-extrabold">🔑 એડમિન / સ્ટાફ PIN બદલો</button>
       </div>
       <div id="pin-setup-fields" class="hidden space-y-2.5">
         <div>
@@ -3667,8 +3668,10 @@
       }
       renderExpiryAlerts();
 
-      // #3: Party Ledger WhatsApp Statement
-      document.getElementById('ledger-wa-btn')?.addEventListener('click', () => {
+      // #3: Party Ledger WhatsApp Statement (fallback only when href not set)
+      document.getElementById('ledger-wa-btn')?.addEventListener('click', (ev) => {
+        const curHref = ev.currentTarget?.getAttribute('href') || '';
+        if (curHref && curHref !== '#') return;
         const modal = document.getElementById('party-ledger-modal');
         if (!modal) return;
         const title = modal.querySelector('h3')?.textContent || 'પાર્ટી ખાતાવહી';
@@ -3689,13 +3692,15 @@
       function updatePinUI() {
         const btn = document.getElementById('pin-lock-btn');
         if (btn) btn.textContent = staffLocked ? '👤 સ્ટાફ લોગીન (Locked)' : '👑 એડમિન લોગીન';
+        const chgBtn = document.getElementById('pin-change-header-btn');
+        if (chgBtn) chgBtn.classList.toggle('hidden', !(appUnlocked && !staffLocked));
         document.querySelectorAll('.owner-only-vcard').forEach(el => {
           el.classList.toggle('hidden', !!staffLocked);
         });
         if (staffLocked) {
           const repPanel = document.getElementById('tab-reports');
           if (repPanel && !repPanel.classList.contains('hidden') && typeof switchTab === 'function') {
-            switchTab('tab-home');
+            switchTab('dashboard');
           }
         }
       }
@@ -3712,10 +3717,12 @@
         if (setupBox) setupBox.classList.remove('hidden');
         if (titleEl) titleEl.textContent = '⚙️ એડમિન & સ્ટાફ PIN સેટ કરો';
         if (descEl) descEl.textContent = 'માલિક (Admin) અને સ્ટાફ (Staff) માટે અલગ 4-અંકના PIN સેટ કરો.';
-        if (aInp) aInp.value = '';
-        if (sInp) sInp.value = '';
+        let curA = '', curS = '';
+        try { curA = localStorage.getItem(PIN_KEY) || ''; curS = localStorage.getItem(STAFF_PIN_KEY) || ''; } catch (e) {}
+        if (aInp) aInp.value = curA;
+        if (sInp) sInp.value = curS;
         if (closeBtn) closeBtn.classList.toggle('hidden', !canClose);
-        if (modal) modal.classList.remove('hidden');
+        if (modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; modal.style.display = 'flex'; }
         setTimeout(() => { try { aInp && aInp.focus(); } catch (e) {} }, 80);
       }
       function openStartupOrUnlockModal(isStartup) {
@@ -3740,11 +3747,15 @@
         if (descEl) descEl.textContent = 'માલિક (Admin) માટે Admin PIN અને સ્ટાફ માટે Staff PIN દાખલ કરો.';
         if (closeBtn) closeBtn.classList.toggle('hidden', !appUnlocked || !!isStartup);
         if (manageBtn) manageBtn.classList.toggle('hidden', !(appUnlocked && !staffLocked));
-        if (modal) modal.classList.remove('hidden');
+        if (modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; modal.style.display = 'flex'; }
         setTimeout(() => { try { inp && inp.focus(); } catch (e) {} }, 80);
       }
       document.getElementById('pin-lock-btn')?.addEventListener('click', () => {
         openStartupOrUnlockModal(false);
+      });
+      document.getElementById('pin-change-header-btn')?.addEventListener('click', () => {
+        if (!appUnlocked || staffLocked) return;
+        openPinSetupMode(true);
       });
       document.getElementById('pin-manage-btn')?.addEventListener('click', () => {
         if (!appUnlocked || staffLocked) return;
@@ -3752,7 +3763,7 @@
       });
       document.getElementById('close-pin-modal')?.addEventListener('click', () => {
         if (!appUnlocked) return;
-        document.getElementById('pin-modal')?.classList.add('hidden');
+        const _pm = document.getElementById('pin-modal'); if (_pm) { _pm.classList.add('hidden'); _pm.style.display = 'none'; }
       });
       function saveDualPinsHandler() {
         const aVal = normPinDigits(document.getElementById('pin-admin-setup-input')?.value || '');
@@ -3768,7 +3779,7 @@
         appUnlocked = true;
         staffLocked = false;
         updatePinUI();
-        document.getElementById('pin-modal')?.classList.add('hidden');
+        const _pm = document.getElementById('pin-modal'); if (_pm) { _pm.classList.add('hidden'); _pm.style.display = 'none'; }
         showToast('👑 Admin PIN & સ્ટાફ PIN સેવ થઈ ગયા ✔');
       }
       function submitPinHandler() {
@@ -3785,13 +3796,13 @@
           appUnlocked = true;
           staffLocked = false;
           updatePinUI();
-          document.getElementById('pin-modal')?.classList.add('hidden');
+          const _pm = document.getElementById('pin-modal'); if (_pm) { _pm.classList.add('hidden'); _pm.style.display = 'none'; }
           showToast('👑 માલિક (Admin) લોગીન થયું ✔');
         } else if (savedStaff && val === savedStaff) {
           appUnlocked = true;
           staffLocked = true;
           updatePinUI();
-          document.getElementById('pin-modal')?.classList.add('hidden');
+          const _pm = document.getElementById('pin-modal'); if (_pm) { _pm.classList.add('hidden'); _pm.style.display = 'none'; }
           showToast('👤 સ્ટાફ લોગીન થયું 🔒');
         } else {
           if (inp) { inp.value = ''; inp.focus(); }
@@ -4017,7 +4028,7 @@
     })();
   </script>
   <!-- INSTANT PARTIAL PAYMENT MODAL -->
-  <div id="partial-pay-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+  <div id="partial-pay-modal" class="fixed inset-0 z-[60] hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 no-print">
     <div class="bg-white rounded-2xl border-2 border-[#0D2C4D] shadow-2xl w-full max-w-md overflow-hidden">
       <div class="bg-[#0D2C4D] text-white px-5 py-3.5 flex items-center justify-between">
         <div>
@@ -4115,7 +4126,7 @@
         document.getElementById('pp-amount').value = prefillFull && absDv > 0 ? absDv.toFixed(0) : '';
         document.getElementById('pp-date').value = new Date().toISOString().slice(0, 10);
         document.getElementById('pp-note').value = prefillFull ? 'ખાતું પૂરેપૂરું જમા' : 'પાર્શિયલ પેમેન્ટ';
-        document.getElementById('partial-pay-modal').classList.remove('hidden');
+        const _ppo = document.getElementById('partial-pay-modal'); if (_ppo) { _ppo.classList.remove('hidden'); _ppo.style.display = 'flex'; }
         setTimeout(() => document.getElementById('pp-amount')?.focus(), 80);
       };
 
@@ -4127,7 +4138,7 @@
         if (window.currentLedgerPartyId) openPartialPayModal(window.currentLedgerPartyId, false);
       });
       document.getElementById('close-partial-modal')?.addEventListener('click', () => {
-        document.getElementById('partial-pay-modal').classList.add('hidden');
+        const _ppc = document.getElementById('partial-pay-modal'); if (_ppc) { _ppc.classList.add('hidden'); _ppc.style.display = 'none'; }
       });
       document.querySelectorAll('.pp-quick-pct').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -4170,7 +4181,7 @@
         if (typeof syncNextDocNumbers === 'function') syncNextDocNumbers();
         if (typeof syncReceiptPreview === 'function') syncReceiptPreview();
         renderAll();
-        document.getElementById('partial-pay-modal').classList.add('hidden');
+        const _ppc = document.getElementById('partial-pay-modal'); if (_ppc) { _ppc.classList.add('hidden'); _ppc.style.display = 'none'; }
         if (!document.getElementById('party-ledger-modal')?.classList.contains('hidden') && typeof openPartyLedger === 'function') {
           openPartyLedger(p.id);
         }
@@ -4341,14 +4352,14 @@
         renderPLParties();
         renderPLProducts();
         buildPLMessage();
-        document.getElementById('price-list-modal').classList.remove('hidden');
+        const _plo = document.getElementById('price-list-modal'); if (_plo) { _plo.classList.remove('hidden'); _plo.style.display = 'flex'; }
       };
 
       document.addEventListener('click', e => {
         if (e.target.closest('.open-price-list-btn')) openPriceListModal();
       });
       document.getElementById('close-pl-modal')?.addEventListener('click', () => {
-        document.getElementById('price-list-modal').classList.add('hidden');
+        const _plc = document.getElementById('price-list-modal'); if (_plc) { _plc.classList.add('hidden'); _plc.style.display = 'none'; }
       });
       document.querySelectorAll('.pl-tier-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -4884,6 +4895,32 @@
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       if (typeof renderAll === 'function') renderAll();
       if (typeof pushToCloudNow === 'function') setTimeout(() => pushToCloudNow(false), 600);
+    })();
+  </script>
+  <script id="global-modal-safety-fix">
+    (function () {
+      const CLOSEABLE_MODALS = ['party-ledger-modal', 'cloud-modal', 'install-help-modal', 'partial-pay-modal', 'price-list-modal'];
+      function hideModal(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+      document.addEventListener('click', function (e) {
+        if (e.target.closest('#close-ledger-modal')) hideModal('party-ledger-modal');
+        else if (e.target.closest('#close-cloud-modal')) hideModal('cloud-modal');
+        else if (e.target.closest('#close-install-modal')) hideModal('install-help-modal');
+        else if (e.target.closest('#close-partial-modal')) hideModal('partial-pay-modal');
+        else if (e.target.closest('#close-pl-modal')) hideModal('price-list-modal');
+        else if (e.target && e.target.id && CLOSEABLE_MODALS.includes(e.target.id)) {
+          hideModal(e.target.id);
+        }
+      }, true);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          CLOSEABLE_MODALS.forEach(hideModal);
+        }
+      });
     })();
   </script>
 </body>
