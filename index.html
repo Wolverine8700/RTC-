@@ -970,13 +970,14 @@
           <select id="exp-cat" class="border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold">
             <option value="ટ્રાન્સપોર્ટ / ભાડું">ટ્રાન્સપોર્ટ / ભાડું</option>
             <option value="દુકાન ભાડું">દુકાન ભાડું</option>
+            <option value="ઓફિસ ખર્ચ">ઓફિસ ખર્ચ</option>
             <option value="મજૂરી / પગાર">મજૂરી / પગાર</option>
             <option value="લાઈટ બિલ / ઈન્ટરનેટ">લાઈટ બિલ / ઈન્ટરનેટ</option>
             <option value="અન્ય ખર્ચ">અન્ય ખર્ચ</option>
           </select>
           <input id="exp-note" type="text" placeholder="વિગત (દા.ત. ટેમ્પો ભાડું)" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
           <input id="exp-amt" type="number" placeholder="રકમ (₹)" class="border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
-          <button id="add-exp-btn" class="bg-rose-600 text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-rose-700">+ ખર્ચ ઉમેરો</button>
+          <button type="button" id="add-exp-btn" class="bg-rose-600 text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-rose-700">+ ખર્ચ ઉમેરો</button>
         </div>
         <div class="overflow-x-auto max-h-56 overflow-y-auto">
           <table class="w-full text-xs border-collapse">
@@ -2266,7 +2267,7 @@
         (state.expenses || []).forEach(ex => {
           expTbody.innerHTML += `<tr class="border-b border-slate-200">
             <td class="p-2">${fmtDate(ex.date)}</td>
-            <td class="p-2 font-bold text-[#0D2C4D]">${ex.category}</td>
+            <td class="p-2 font-bold text-[#0D2C4D]">${ex.category || ex.cat || ex.title || "અન્ય ખર્ચ"}</td>
             <td class="p-2">${ex.note || '-'}</td>
             <td class="p-2 text-right font-bold text-rose-700">₹ ${Number(ex.amount||0).toFixed(0)}</td>
             <td class="p-2 text-center"><button data-del-exp="${ex.id}" class="del-exp text-rose-600 font-bold">🗑️</button></td>
@@ -2274,9 +2275,14 @@
         });
         document.querySelectorAll('.del-exp').forEach(btn => {
           btn.addEventListener('click', e => {
-            const id = Number(e.currentTarget.dataset.delExp);
-            state.expenses = (state.expenses || []).filter(x => x.id !== id);
-            saveState(); renderAll(); showToast('ખર્ચ ડિલીટ થયો ✔');
+            const id = e.currentTarget.dataset.delExp;
+            const found = (state.expenses || []).find(x => String(x.id) === String(id));
+            if (found && typeof markRecordDeleted === 'function') markRecordDeleted('expenses', found);
+            state.expenses = (state.expenses || []).filter(x => String(x.id) !== String(id));
+            saveState(); renderAll();
+            if (typeof renderDaybook === 'function') renderDaybook();
+            if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
+            showToast('ખર્ચ ડિલીટ થયો ✔');
           });
         });
       }
@@ -2370,16 +2376,24 @@
         const amt = Number(document.getElementById('exp-amt').value) || 0;
         if (amt <= 0) return showToast('કૃપા કરીને ખર્ચની રકમ લખો');
         if (!state.expenses) state.expenses = [];
+        const catVal = document.getElementById('exp-cat').value;
         state.expenses.unshift({
           id: Date.now(),
+          updatedAt: Date.now(),
+          deleted: false,
           date: fmtDate(document.getElementById('exp-date').value || new Date().toISOString().slice(0, 10)),
-          category: document.getElementById('exp-cat').value,
+          category: catVal,
+          cat: catVal,
+          title: catVal,
           note: document.getElementById('exp-note').value.trim(),
           amount: amt
         });
         document.getElementById('exp-note').value = '';
         document.getElementById('exp-amt').value = '';
-        saveState(); renderAll(); showToast('દુકાનનો ખર્ચ સેવ થયો ✔');
+        saveState(); renderAll();
+        if (typeof renderDaybook === 'function') renderDaybook();
+        if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
+        showToast('ખર્ચ સેવ અને Google Sheet માં અપડેટ થયો ✔');
       });
     }
 
