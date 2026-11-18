@@ -1794,7 +1794,7 @@
           <td class="p-2.5">${fmtDate(b.date)}</td>
           <td class="p-2.5">${b.buyer}</td>
           <td class="p-2.5"><span class="px-2 py-0.5 rounded text-xs font-bold ${b.payment==='Credit'?'bg-amber-100 text-amber-800':'bg-emerald-100 text-emerald-800'}">${b.payment}</span></td>
-          <td class="p-2.5 text-right font-bold">₹ ${b.total.toFixed(2)}</td>
+          <td class="p-2.5 text-right font-bold">₹ ${Number(b.total || 0).toFixed(2)}</td>
           <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button data-edit-bill="${b.id}" class="edit-bill px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-xs font-bold">✏️ એડિટ</button><button data-reprint-bill="${b.id}" class="reprint-bill px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-bold">🖨️ પ્રિન્ટ</button><button data-wa-bill="${b.id}" class="wa-bill px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">💬 WA</button><button data-del-bill="${b.id}" class="del-bill text-red-600 text-xs font-bold">ડિલીટ</button></div></td>
         </tr>`;
       });
@@ -1828,10 +1828,10 @@
     }
 
     function renderAll() {
-      const totalSales = state.bills.filter(b => (b.kind || 'Sales') === 'Sales').reduce((s, b) => s + b.total, 0) - state.bills.filter(b => b.kind === 'Return').reduce((s, b) => s + b.total, 0);
-      const totalPurchase = state.bills.filter(b => b.kind === 'Purchase').reduce((s, b) => s + b.total, 0);
-      const payIn = (state.payments || []).filter(p => p.type === 'In').reduce((s, p) => s + p.amount, 0);
-      const payOut = (state.payments || []).filter(p => p.type === 'Out').reduce((s, p) => s + p.amount, 0);
+      const totalSales = state.bills.filter(b => (b.kind || 'Sales') === 'Sales').reduce((s, b) => s + (Number(b.total) || 0), 0) - state.bills.filter(b => b.kind === 'Return').reduce((s, b) => s + (Number(b.total) || 0), 0);
+      const totalPurchase = state.bills.filter(b => b.kind === 'Purchase').reduce((s, b) => s + (Number(b.total) || 0), 0);
+      const payIn = (state.payments || []).filter(p => p.type === 'In').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      const payOut = (state.payments || []).filter(p => p.type === 'Out').reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const totalGet = state.parties.reduce((s, p) => s + (Number(p.due || 0) > 0 ? Number(p.due) : 0), 0);
       const totalGive = state.parties.reduce((s, p) => s + (Number(p.due || 0) < 0 ? Math.abs(Number(p.due)) : 0), 0);
       document.getElementById('kpi-sales').textContent = '₹ ' + totalSales.toFixed(0);
@@ -1846,7 +1846,7 @@
       state.bills.slice().sort((a, b) => (toISODateKey(b.date) || '').localeCompare(toISODateKey(a.date) || '') || ((Number(b.id) || 0) - (Number(a.id) || 0))).slice(0, 5).forEach(b => {
         recent.innerHTML += `<div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-200">
           <div><span class="font-bold text-[#0D2C4D]">${b.no}</span> — ${b.buyer}</div>
-          <div class="font-extrabold text-[#B45309]">₹ ${b.total.toFixed(2)}</div>
+          <div class="font-extrabold text-[#B45309]">₹ ${Number(b.total || 0).toFixed(2)}</div>
         </div>`;
       });
 
@@ -2267,8 +2267,8 @@
         (state.expenses || []).forEach(ex => {
           expTbody.innerHTML += `<tr class="border-b border-slate-200">
             <td class="p-2">${fmtDate(ex.date)}</td>
-            <td class="p-2 font-bold text-[#0D2C4D]">${ex.category || ex.cat || ex.title || "અન્ય ખર્ચ"}</td>
-            <td class="p-2">${ex.note || '-'}</td>
+            <td class="p-2 font-bold text-[#0D2C4D]">${typeof esc === 'function' ? esc(ex.category || ex.cat || ex.title || "અન્ય ખર્ચ") : (ex.category || ex.cat || ex.title || "અન્ય ખર્ચ")}</td>
+            <td class="p-2">${typeof esc === 'function' ? esc(ex.note || '-') : (ex.note || '-')}</td>
             <td class="p-2 text-right font-bold text-rose-700">₹ ${Number(ex.amount||0).toFixed(0)}</td>
             <td class="p-2 text-center"><button data-del-exp="${ex.id}" class="del-exp text-rose-600 font-bold">🗑️</button></td>
           </tr>`;
@@ -2369,31 +2369,47 @@
     renderBillRows();
 
     const expDateInp = document.getElementById('exp-date');
-    if (expDateInp) expDateInp.value = new Date().toISOString().slice(0, 10);
+    if (expDateInp && !expDateInp.value) {
+      const _now = new Date();
+      expDateInp.value = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+    }
+    function parseLocaleNum(val) {
+      const map = {'૦':'0','૧':'1','૨':'2','૩':'3','૪':'4','૫':'5','૬':'6','૭':'7','૮':'8','૯':'9','०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9'};
+      const cleaned = String(val || '').replace(/[૦-૯०-९]/g, ch => map[ch] || ch).replace(/[^0-9.-]/g, '');
+      const n = parseFloat(cleaned);
+      return isNaN(n) ? 0 : n;
+    }
     const addExpBtn = document.getElementById('add-exp-btn');
     if (addExpBtn) {
       addExpBtn.addEventListener('click', () => {
-        const amt = Number(document.getElementById('exp-amt').value) || 0;
+        const amtInp = document.getElementById('exp-amt');
+        const noteInp = document.getElementById('exp-note');
+        const dateInp = document.getElementById('exp-date');
+        const catInp = document.getElementById('exp-cat');
+        const amt = parseLocaleNum(amtInp ? amtInp.value : 0);
         if (amt <= 0) return showToast('કૃપા કરીને ખર્ચની રકમ લખો');
-        if (!state.expenses) state.expenses = [];
-        const catVal = document.getElementById('exp-cat').value;
+        if (!Array.isArray(state.expenses)) state.expenses = [];
+        const catVal = (catInp && catInp.value) ? catInp.value : 'અન્ય ખર્ચ';
+        const rawDate = (dateInp && dateInp.value) ? dateInp.value : new Date().toISOString().slice(0, 10);
         state.expenses.unshift({
           id: Date.now(),
           updatedAt: Date.now(),
           deleted: false,
-          date: fmtDate(document.getElementById('exp-date').value || new Date().toISOString().slice(0, 10)),
+          date: fmtDate(rawDate),
           category: catVal,
           cat: catVal,
           title: catVal,
-          note: document.getElementById('exp-note').value.trim(),
+          note: noteInp ? noteInp.value.trim() : '',
           amount: amt
         });
-        document.getElementById('exp-note').value = '';
-        document.getElementById('exp-amt').value = '';
-        saveState(); renderAll();
-        if (typeof renderDaybook === 'function') renderDaybook();
-        if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
-        showToast('ખર્ચ સેવ અને Google Sheet માં અપડેટ થયો ✔');
+        if (noteInp) noteInp.value = '';
+        if (amtInp) amtInp.value = '';
+        saveState();
+        try { renderReports(); } catch (e) {}
+        try { renderAll(); } catch (e) {}
+        try { if (typeof renderDaybook === 'function') renderDaybook(); } catch (e) {}
+        try { if (typeof pushToCloudNow === 'function') pushToCloudNow(true); } catch (e) {}
+        showToast('દુકાનનો ખર્ચ સેવ થઈ ગયો ✔');
       });
     }
 
