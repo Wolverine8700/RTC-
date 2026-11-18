@@ -1160,7 +1160,9 @@
           try { hasPending = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch (e) {}
           const localTs = Number((state && state._lastModified) || 0);
           const cloudTs = Number(data._lastModified || 0);
-          if (hasPending || (silent && localTs > cloudTs && cloudTs > 0)) {
+          const hasLocalData = Boolean((state.bills && state.bills.length) || (state.parties && state.parties.length) || (state.items && state.items.length) || (state.payments && state.payments.length) || (state.expenses && state.expenses.length));
+          const cloudIsEmpty = !data.bills.length && !(data.parties && data.parties.length) && !(data.items && data.items.length) && !(data.payments && data.payments.length) && !(data.expenses && data.expenses.length);
+          if (hasPending || (hasLocalData && cloudIsEmpty) || (silent && localTs > cloudTs && cloudTs > 0)) {
             await pushToCloudNow(true);
             return;
           }
@@ -4759,16 +4761,35 @@
         const bodyStr = JSON.stringify(window.buildCloudPayloadWithTombstones());
         return fetch(url, {
           method: 'POST',
-          mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
           body: bodyStr
-        }).then(() => {
+        }).then(async (res) => {
+          const txt = await res.text();
+          let ok = false;
+          try { const j = JSON.parse(txt); ok = (j && j.status === 'ok'); } catch (e) {}
+          if (!res.ok || !ok) {
+            try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch (e) {}
+            if (typeof setCloudBadge === 'function') setCloudBadge('⚠️ Sync Error (Check Access)', false);
+            if (force && typeof showToast === 'function') showToast('⚠️ Sheet સિંક એરર: Apps Script માં "Anyone" એક્સેસ તપાસો!');
+            return;
+          }
           try { localStorage.removeItem(PENDING_SYNC_KEY); } catch (e) {}
           if (typeof setCloudBadge === 'function') setCloudBadge('☁️ Auto-Saved ✔', true);
           if (force && typeof showToast === 'function') showToast('ક્લાઉડ (Google Sheet) માં સેવ થઈ ગયું ✔');
         }).catch(() => {
-          try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch (e) {}
-          if (typeof setCloudBadge === 'function') setCloudBadge('📴 Offline Saved', false);
+          return fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: bodyStr
+          }).then(() => {
+            try { localStorage.removeItem(PENDING_SYNC_KEY); } catch (e) {}
+            if (typeof setCloudBadge === 'function') setCloudBadge('☁️ Auto-Saved ✔', true);
+            if (force && typeof showToast === 'function') showToast('ક્લાઉડ (Google Sheet) માં સેવ થઈ ગયું ✔');
+          }).catch(() => {
+            try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch (e) {}
+            if (typeof setCloudBadge === 'function') setCloudBadge('📴 Offline Saved', false);
+          });
         });
       };
 
