@@ -3665,7 +3665,7 @@
         if (btn) btn.textContent = staffLocked ? '👤 સ્ટાફ લોગીન (Locked)' : '👑 એડમિન લોગીન';
         const chgBtn = document.getElementById('pin-change-header-btn');
         if (chgBtn) chgBtn.classList.toggle('hidden', !(appUnlocked && !staffLocked));
-        document.querySelectorAll('.owner-only-vcard').forEach(el => {
+        document.querySelectorAll('.owner-only-vcard, [data-tab="reports"], #quick-reports-btn').forEach(el => {
           el.classList.toggle('hidden', !!staffLocked);
         });
         if (staffLocked) {
