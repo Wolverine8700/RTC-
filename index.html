@@ -977,7 +977,7 @@
             <option value="અન્ય ખર્ચ">અન્ય ખર્ચ</option>
           </select>
           <input id="exp-note" type="text" placeholder="વિગત (દા.ત. ટેમ્પો ભાડું)" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
-          <input id="exp-amt" type="number" placeholder="રકમ (₹)" class="border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
+          <input id="exp-amt" type="text" inputmode="decimal" placeholder="રકમ (₹)" class="border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
           <button type="button" id="add-exp-btn" class="bg-rose-600 text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-rose-700">+ ખર્ચ ઉમેરો</button>
         </div>
         <div class="overflow-x-auto max-h-56 overflow-y-auto">
@@ -2206,7 +2206,7 @@
           <td class="p-2"><span class="px-2 py-0.5 rounded text-xs font-bold ${p.type==='In'?'bg-emerald-100 text-emerald-800':'bg-rose-100 text-rose-800'}">${p.type==='In'?'Payment In':'Payment Out'}</span></td>
           <td class="p-2">${p.party}</td>
           <td class="p-2">${p.mode} ${p.note ? '('+p.note+')' : ''}</td>
-          <td class="p-2 text-right font-bold">₹ ${p.amount.toFixed(2)}</td>
+          <td class="p-2 text-right font-bold">₹ ${Number(p.amount || 0).toFixed(2)}</td>
           <td class="p-2 text-center whitespace-nowrap space-x-1"><button data-wa-pay="${p.id}" class="wa-pay-row px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold">💬</button><button data-del-pay="${p.id}" class="del-pay px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold">🗑️</button></td>
         </tr>`;
       });
@@ -2362,12 +2362,12 @@
       a.click();
     });
 
-    loadState();
-    document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
-    renderPaymentsTable();
-    syncReceiptPreview();
-    document.getElementById('bill-date').value = new Date().toISOString().split('T')[0];
-    renderBillRows();
+    try { loadState(); } catch (e) { console.error('loadState', e); }
+    try { const _pd = document.getElementById('pay-date'); if (_pd) _pd.value = new Date().toISOString().split('T')[0]; } catch (e) {}
+    try { renderPaymentsTable(); } catch (e) { console.error('renderPaymentsTable', e); }
+    try { syncReceiptPreview(); } catch (e) { console.error('syncReceiptPreview', e); }
+    try { const _bd = document.getElementById('bill-date'); if (_bd) _bd.value = new Date().toISOString().split('T')[0]; } catch (e) {}
+    try { renderBillRows(); } catch (e) { console.error('renderBillRows', e); }
 
     const expDateInp = document.getElementById('exp-date');
     if (expDateInp && !expDateInp.value) {
@@ -2381,7 +2381,8 @@
       return isNaN(n) ? 0 : n;
     }
     const addExpBtn = document.getElementById('add-exp-btn');
-    if (addExpBtn) {
+    if (addExpBtn && !addExpBtn.dataset.wired) {
+      addExpBtn.dataset.wired = '1';
       addExpBtn.addEventListener('click', () => {
         const amtInp = document.getElementById('exp-amt');
         const noteInp = document.getElementById('exp-note');
@@ -2411,6 +2412,9 @@
         try { if (typeof renderDaybook === 'function') renderDaybook(); } catch (e) {}
         try { if (typeof pushToCloudNow === 'function') pushToCloudNow(true); } catch (e) {}
         showToast('દુકાનનો ખર્ચ સેવ થઈ ગયો ✔');
+      });
+      document.getElementById('exp-amt')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addExpBtn.click(); }
       });
     }
 
