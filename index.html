@@ -1121,7 +1121,8 @@
         if (raw) { state = JSON.parse(raw); if (!state.payments) state.payments = []; if (!state.expenses) state.expenses = []; }
       } catch (e) {}
     }
-    const DEFAULT_CLOUD_EXEC_URL = "https://script.google.com/macros/s/AKfycbzqU3XqL41UVnWWxkiYfP2NYwR_s-OcUlgTs6HDnplAiMaU_Jebx5BU2z5dezViJ-De0w/exec";
+    const DEFAULT_CLOUD_EXEC_URL = "https://script.google.com/macros/s/AKfycbw8yGxPXST5uG78FvU_cYibEDmqwTE02ceMuAWl8S3V8oA8u6HEOjvXPV6wNL6yeXR1zw/exec";
+    try { if (localStorage.getItem("rtc_cloud_url_v1") === "https://script.google.com/macros/s/AKfycbzqU3XqL41UVnWWxkiYfP2NYwR_s-OcUlgTs6HDnplAiMaU_Jebx5BU2z5dezViJ-De0w/exec") localStorage.setItem("rtc_cloud_url_v1", DEFAULT_CLOUD_EXEC_URL); } catch (e) {}
     const CLOUD_URL_KEY = "raj_trading_cloud_url_v1";
     const PENDING_SYNC_KEY = "raj_trading_pending_sync_v1";
     const AUTO_SYNC_KEY = "raj_trading_cloud_url_v1_auto";

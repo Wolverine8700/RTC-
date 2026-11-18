@@ -1,4 +1,4 @@
-const CACHE_NAME = 'billing-pwa-v13';
+const CACHE_NAME = 'billing-pwa-v14';
 const ASSETS = [
   './',
   './index.html',
