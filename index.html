@@ -1749,6 +1749,8 @@
 
       state.items.push({
         id: Date.now(),
+        updatedAt: Date.now(),
+        deleted: false,
         name,
         pack: rawPack,
         rate: retailRate,
@@ -1973,7 +1975,7 @@
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-11 h-11 rounded-full ${isGive ? 'bg-rose-700 text-white' : 'bg-[#0D2C4D] text-[#D4AF37]'} font-extrabold flex items-center justify-center text-lg flex-shrink-0">${ini}</div>
                 <div class="min-w-0">
-                  <div class="font-bold text-[#0D2C4D] text-sm truncate">${p.name}</div>
+                  <div data-ledger-party="${p.id}" data-ledger-name="${p.name}" class="open-ledger font-bold text-[#0D2C4D] hover:text-blue-700 cursor-pointer text-sm truncate" title="ખાતાવહી ખોલો">${p.name}</div>
                   <div class="text-xs text-slate-500 truncate">${p.city || 'મોટીઝેર'} • ${p.phone || '-'}</div>
                   ${dStatus ? `<div class="text-[11px] mt-0.5">${dStatus}</div>` : ''}
                 </div>
@@ -1985,7 +1987,7 @@
             </div>
             <div class="flex flex-wrap items-center justify-between gap-1.5 pt-2.5 border-t border-slate-100">
               <div class="flex flex-wrap gap-1.5">
-                <button data-ledger-party="${p.id}" class="open-ledger px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold">📒 ખાતાવહી</button>
+                <button type="button" data-ledger-party="${p.id}" data-ledger-name="${p.name}" onclick="openPartyLedger(this.dataset.ledgerParty, this.dataset.ledgerName)" class="open-ledger px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold">📒 ખાતાવહી</button>
                 <button data-partial-party="${p.id}" class="open-partial-pay px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold">💵 પેમેન્ટ</button>
                 <button data-png-party="${p.id}" class="png-party-btn px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold">📸 ફોટો</button>
                 ${cleanPh ? `<a href="https://wa.me/91${cleanPh.slice(-10)}?text=${waMsg}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold">💬 WA</a>` : ''}
@@ -2013,12 +2015,12 @@
           <td class="p-2.5">${p.city}</td>
           <td class="p-2.5 text-right font-bold ${dv>0?'text-emerald-700':dv<0?'text-rose-700':'text-slate-500'}">${balStr}</td>
           <td class="p-2.5 text-center"><input type="date" data-party-duedate="${p.id}" value="${p.dueDate || ''}" class="party-duedate-input border border-slate-300 rounded px-2 py-1 text-xs"></td>
-          <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button data-ledger-party="${p.id}" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">📒 ખાતાવહી</button><button data-png-party="${p.id}" class="png-party-btn px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold">📸 ફોટો</button><button data-clear-due="${p.id}" class="clear-due px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">✔ ચોખ્ખું</button><button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️</button></div></td>
+          <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button type="button" data-ledger-party="${p.id}" data-ledger-name="${p.name}" onclick="openPartyLedger(this.dataset.ledgerParty, this.dataset.ledgerName)" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">📒 ખાતાવહી</button><button data-png-party="${p.id}" class="png-party-btn px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold">📸 ફોટો</button><button data-clear-due="${p.id}" class="clear-due px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">✔ ચોખ્ખું</button><button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️</button></div></td>
         </tr>`;
       });
       document.querySelectorAll('.party-duedate-input').forEach(inp => {
         inp.addEventListener('change', e => {
-          const p = state.parties.find(x => x.id === Number(e.target.dataset.partyDuedate));
+          const p = (state.parties || []).find(x => String(x.id) === String(e.target.dataset.partyDuedate));
           if (p) {
             p.dueDate = e.target.value;
             saveState();
@@ -2029,15 +2031,15 @@
       });
       document.querySelectorAll('.clear-due').forEach(btn => {
         btn.addEventListener('click', e => {
-          const pid = Number(e.target.dataset.clearDue);
+          const pid = e.target.dataset.clearDue;
           if (typeof openPartialPayModal === 'function') openPartialPayModal(pid, true);
         });
       });
       document.querySelectorAll('.del-party').forEach(btn => {
         btn.addEventListener('click', e => {
           const el = e.currentTarget;
-          const id = Number(el.dataset.delParty);
-          const p = state.parties.find(x => x.id === id);
+          const id = el.dataset.delParty;
+          const p = (state.parties || []).find(x => String(x.id) === String(id));
           if (!p) return;
           if (el.dataset.confirm !== '1') {
             el.dataset.confirm = '1';
@@ -2091,7 +2093,7 @@
       });
       document.querySelectorAll('.item-edit-inp').forEach(inp => {
         inp.addEventListener('change', e => {
-          const it = state.items.find(x => x.id === Number(e.target.dataset.editItem));
+          const it = (state.items || []).find(x => String(x.id) === String(e.target.dataset.editItem));
           const f = e.target.dataset.f;
           if (it && f) {
             it[f] = (f === 'rate' || f === 'stock') ? (Number(e.target.value) || 0) : e.target.value.trim();
@@ -2101,13 +2103,13 @@
       });
       document.querySelectorAll('.min-stock-input').forEach(inp => {
         inp.addEventListener('change', e => {
-          const it = state.items.find(x => x.id === Number(e.target.dataset.minItem));
+          const it = (state.items || []).find(x => String(x.id) === String(e.target.dataset.minItem));
           if (it) { it.minStock = Number(e.target.value) || 0; saveState(); renderAll(); showToast('એલર્ટ મર્યાદા સેવ થઈ ✔'); }
         });
       });
       document.querySelectorAll('.ws-rate-input').forEach(inp => {
         inp.addEventListener('change', e => {
-          const it = state.items.find(x => x.id === Number(e.target.dataset.wsItem));
+          const it = (state.items || []).find(x => String(x.id) === String(e.target.dataset.wsItem));
           if (it) { it.wholesaleRate = Number(e.target.value) || 0; saveState(); renderAll(); showToast('હોલસેલ ભાવ સેવ થયો ✔'); }
         });
       });
@@ -2445,7 +2447,7 @@
     }
 
     function generateLedgerPNG(partyId) {
-      const p = state.parties.find(x => x.id === Number(partyId));
+      const p = (state.parties || []).find(x => String(x.id) === String(partyId) || String(x.name || '').trim() === String(partyId || '').trim());
       if (!p) return;
       const { entries, totD, totC, netBalance } = buildPartyLedgerData(p);
       const W = 940;
@@ -2598,8 +2600,12 @@
       }, 'image/png');
     }
 
-    function openPartyLedger(partyId) {
-      const p = (state.parties || []).find(x => String(x.id) === String(partyId));
+    function openPartyLedger(partyId, partyName) {
+      const p = (state.parties || []).find(x =>
+        (partyId != null && partyId !== '' && String(x.id) === String(partyId)) ||
+        (partyName && String(x.name || '').trim().toLowerCase() === String(partyName).trim().toLowerCase()) ||
+        (partyId != null && String(x.name || '').trim().toLowerCase() === String(partyId).trim().toLowerCase())
+      );
       if (!p) { if (typeof showToast === 'function') showToast('પાર્ટી ખાતું મળ્યું નથી'); return; }
       window.currentLedgerPartyId = p.id;
       const modal = document.getElementById('party-ledger-modal');
@@ -2674,7 +2680,7 @@
 
     document.addEventListener('click', e => {
       const lbtn = e.target.closest('.open-ledger');
-      if (lbtn) openPartyLedger(lbtn.dataset.ledgerParty);
+      if (lbtn) openPartyLedger(lbtn.dataset.ledgerParty, lbtn.dataset.ledgerName);
     });
     const closeL = document.getElementById('close-ledger-modal');
     if (closeL) closeL.addEventListener('click', () => { const m = document.getElementById('party-ledger-modal'); m.classList.add('hidden'); m.style.display = ''; });
@@ -3529,7 +3535,7 @@
       document.addEventListener('click', e => {
         const eb = e.target.closest('.edit-bill');
         if (!eb) return;
-        const b = (state.bills || []).find(x => x.id === Number(eb.dataset.editBill));
+        const b = (state.bills || []).find(x => String(x.id) === String(eb.dataset.editBill));
         if (!b) return;
         window.editingBillId = b.id;
         document.getElementById('bill-kind').value = b.kind || 'Sales';
@@ -3967,7 +3973,7 @@
 
       let activePartialPartyId = null;
       window.openPartialPayModal = function(partyId, prefillFull) {
-        const p = (state.parties || []).find(x => x.id === Number(partyId));
+        const p = (state.parties || []).find(x => String(x.id) === String(partyId) || String(x.name || '').trim() === String(partyId || '').trim());
         if (!p) return;
         activePartialPartyId = p.id;
         const dv = Number(p.due || 0);
@@ -3997,7 +4003,7 @@
       });
       document.querySelectorAll('.pp-quick-pct').forEach(btn => {
         btn.addEventListener('click', () => {
-          const p = (state.parties || []).find(x => x.id === Number(activePartialPartyId));
+          const p = (state.parties || []).find(x => String(x.id) === String(activePartialPartyId));
           if (!p) return;
           const pct = Number(btn.dataset.ppPct || 1);
           const val = Math.round(Math.abs(Number(p.due || 0)) * pct);
@@ -4006,7 +4012,7 @@
       });
 
       document.getElementById('pp-save-btn')?.addEventListener('click', () => {
-        const p = (state.parties || []).find(x => x.id === Number(activePartialPartyId));
+        const p = (state.parties || []).find(x => String(x.id) === String(activePartialPartyId));
         if (!p) return;
         const amt = Number(document.getElementById('pp-amount')?.value || 0);
         if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
@@ -4505,6 +4511,251 @@
           setTimeout(() => { window.print(); setTimeout(cleanup, 1200); }, 100);
         });
       }
+    })();
+  </script>
+  <script id="master-bugfix-v4">
+    (function applyMasterBugfixesV4() {
+      // 1. Track tombstones (deleted records) so Code.gs merge sync marks Deleted=TRUE and never resurrects them
+      const TOMBSTONE_KEY = STORAGE_KEY + '_tombstones_v4';
+      function getTombstones() {
+        try { return JSON.parse(localStorage.getItem(TOMBSTONE_KEY) || '{}') || {}; } catch (e) { return {}; }
+      }
+      function addTombstone(col, itemObj) {
+        if (!itemObj || itemObj.id == null) return;
+        const ts = getTombstones();
+        if (!ts[col]) ts[col] = {};
+        ts[col][String(itemObj.id)] = Object.assign({}, itemObj, { deleted: true, updatedAt: Date.now() });
+        try { localStorage.setItem(TOMBSTONE_KEY, JSON.stringify(ts)); } catch (e) {}
+      }
+      window.markRecordDeleted = addTombstone;
+
+      function isMarkedDeleted(x, col, tsMap) {
+        if (!x) return true;
+        if (x.deleted === true || String(x.deleted).toUpperCase() === 'TRUE') return true;
+        if (tsMap && tsMap[col] && tsMap[col][String(x.id)]) return true;
+        return false;
+      }
+
+      // 2. Clean state: remove deleted items/bills/parties/payments/expenses, deduplicate same Bill No, and fix Party Due from Ledger
+      window.cleanAndNormalizeState = function() {
+        if (!state || typeof state !== 'object') return;
+        const tsMap = getTombstones();
+
+        ['items', 'bills', 'parties', 'payments', 'expenses'].forEach(col => {
+          if (!Array.isArray(state[col])) state[col] = [];
+          // Record any incoming cloud items that already have deleted=true into local tombstones
+          state[col].forEach((x, _idx) => {
+            if (x.id === undefined || x.id === null || x.id === '') x.id = Date.now() + _idx;
+            if (x && (x.deleted === true || String(x.deleted).toUpperCase() === 'TRUE')) {
+              addTombstone(col, x);
+            }
+          });
+          const latestTs = getTombstones();
+          state[col] = state[col].filter(x => !isMarkedDeleted(x, col, latestTs));
+          state[col].forEach((x, _idx) => {
+            if (x.id === undefined || x.id === null || x.id === '') x.id = Date.now() + _idx;
+            if (!x.updatedAt) x.updatedAt = Number(x.id) > 1000000000000 ? Number(x.id) : Date.now();
+            x.deleted = false;
+          });
+        });
+
+        // Deduplicate bills with identical (kind + Bill No) — e.g. duplicate RTC/BOS/001
+        const seenBillNo = new Map();
+        const uniqueBills = [];
+        state.bills.forEach(b => {
+          const key = ((b.kind || 'Sales') + '|' + String(b.no || '').trim().toUpperCase());
+          if (!b.no) { uniqueBills.push(b); return; }
+          if (!seenBillNo.has(key)) {
+            seenBillNo.set(key, b);
+            uniqueBills.push(b);
+          } else {
+            const prev = seenBillNo.get(key);
+            const prevScore = Number(prev.updatedAt || 0) || Number(prev.id || 0);
+            const curScore = Number(b.updatedAt || 0) || Number(b.id || 0);
+            if (curScore > prevScore) {
+              addTombstone('bills', prev);
+              const idx = uniqueBills.indexOf(prev);
+              if (idx !== -1) uniqueBills[idx] = b;
+              seenBillNo.set(key, b);
+            } else {
+              addTombstone('bills', b);
+            }
+          }
+        });
+        state.bills = uniqueBills;
+
+        // Deduplicate items with identical name
+        const seenItemName = new Map();
+        const uniqueItems = [];
+        state.items.forEach(it => {
+          const key = String(it.name || '').trim().toLowerCase();
+          if (!key) return;
+          if (!seenItemName.has(key)) {
+            seenItemName.set(key, it);
+            uniqueItems.push(it);
+          } else {
+            const prev = seenItemName.get(key);
+            const prevScore = Number(prev.updatedAt || 0) || Number(prev.id || 0);
+            const curScore = Number(it.updatedAt || 0) || Number(it.id || 0);
+            if (curScore > prevScore) {
+              addTombstone('items', prev);
+              const idx = uniqueItems.indexOf(prev);
+              if (idx !== -1) uniqueItems[idx] = it;
+              seenItemName.set(key, it);
+            } else {
+              addTombstone('items', it);
+            }
+          }
+        });
+        state.items = uniqueItems;
+
+        // Reconcile every party's due with buildPartyLedgerData(p).netBalance so Cash Bill + Cash Receipt never causes false -1600 due
+        if (typeof buildPartyLedgerData === 'function') {
+          state.parties.forEach(p => {
+            const led = buildPartyLedgerData(p);
+            if (led && typeof led.netBalance === 'number' && (led.entries || []).length > 0) {
+              if (Math.abs((Number(p.due) || 0) - led.netBalance) > 0.01) {
+                p.due = led.netBalance;
+                p.updatedAt = Date.now();
+              }
+            }
+          });
+        }
+      };
+
+      // 3. Build payload for pushToCloudNow that includes tombstones with deleted:true so Code.gs marks them Deleted=TRUE in Google Sheet
+      window.buildCloudPayloadWithTombstones = function() {
+        cleanAndNormalizeState();
+        const tsMap = getTombstones();
+        const payload = Object.assign({}, state, { _lastModified: Date.now() });
+        ['items', 'bills', 'parties', 'payments', 'expenses'].forEach(col => {
+          const active = (state[col] || []).map(x => Object.assign({}, x, { deleted: false, updatedAt: x.updatedAt || Date.now() }));
+          const activeIds = new Set(active.map(x => String(x.id)));
+          const deletedList = Object.values((tsMap && tsMap[col]) || {}).filter(x => x && !activeIds.has(String(x.id))).map(x => Object.assign({}, x, { deleted: true, updatedAt: Math.max(Number(x.updatedAt || 0), Date.now()) }));
+          payload[col] = active.concat(deletedList);
+        });
+        return payload;
+      };
+
+      // Override pushToCloudNow to send tombstones + normal POST (and fallback no-cors)
+      window.pushToCloudNow = function(force) {
+        const url = typeof getCloudUrl === 'function' ? getCloudUrl() : '';
+        if (!url) return Promise.resolve();
+        if (!force && typeof isAutoCloudEnabled === 'function' && !isAutoCloudEnabled()) return Promise.resolve();
+        if (!navigator.onLine) {
+          try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch (e) {}
+          if (typeof setCloudBadge === 'function') setCloudBadge('📴 Offline Saved', false);
+          return Promise.resolve();
+        }
+        if (typeof setCloudBadge === 'function') setCloudBadge('☁️ Saving...', false);
+        const bodyStr = JSON.stringify(window.buildCloudPayloadWithTombstones());
+        return fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: bodyStr
+        }).then(() => {
+          try { localStorage.removeItem(PENDING_SYNC_KEY); } catch (e) {}
+          if (typeof setCloudBadge === 'function') setCloudBadge('☁️ Auto-Saved ✔', true);
+          if (force && typeof showToast === 'function') showToast('ક્લાઉડ (Google Sheet) માં સેવ થઈ ગયું ✔');
+        }).catch(() => {
+          try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch (e) {}
+          if (typeof setCloudBadge === 'function') setCloudBadge('📴 Offline Saved', false);
+        });
+      };
+
+      // Wrap pullFromCloudNow so any pulled cloud data immediately strips deleted:true and deduplicates bills/items
+      const origPull = window.pullFromCloudNow;
+      if (typeof origPull === 'function') {
+        window.pullFromCloudNow = async function(silent) {
+          await origPull(silent);
+          window.cleanAndNormalizeState();
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          if (typeof renderAll === 'function') renderAll();
+        };
+      }
+
+      // Capture deletes BEFORE they happen so tombstones are recorded with updatedAt = Date.now()
+      document.addEventListener('click', e => {
+        const delItemBtn = e.target.closest('.del-item');
+        if (delItemBtn && delItemBtn.dataset.delItem) {
+          const id = delItemBtn.dataset.delItem;
+          const found = (state.items || []).find(x => String(x.id) === String(id));
+          if (found) addTombstone('items', found);
+        }
+        const delBillBtn = e.target.closest('.del-bill');
+        if (delBillBtn && delBillBtn.dataset.delBill) {
+          const id = delBillBtn.dataset.delBill;
+          const found = (state.bills || []).find(x => String(x.id) === String(id));
+          if (found) addTombstone('bills', found);
+        }
+        const delPartyBtn = e.target.closest('.del-party');
+        if (delPartyBtn && delPartyBtn.dataset.delParty) {
+          const id = delPartyBtn.dataset.delParty;
+          const found = (state.parties || []).find(x => String(x.id) === String(id));
+          if (found) addTombstone('parties', found);
+        }
+        const delPayBtn = e.target.closest('.del-pay');
+        if (delPayBtn && delPayBtn.dataset.delPay) {
+          const id = delPayBtn.dataset.delPay;
+          const found = (state.payments || []).find(x => String(x.id) === String(id));
+          if (found) addTombstone('payments', found);
+        }
+      }, true);
+
+      // Clean current state right now and re-render
+      
+      // Ensure every record in state has a non-empty id
+      ['items', 'bills', 'parties', 'payments', 'expenses'].forEach((col, cIdx) => {
+        (state[col] || []).forEach((rec, rIdx) => {
+          if (rec && (rec.id === undefined || rec.id === null || rec.id === '')) {
+            rec.id = Date.now() + (cIdx * 10000) + rIdx;
+          }
+        });
+      });
+      window.openPartyLedger = openPartyLedger;
+
+      // Fix #ledger-print-btn so printing Party Ledger prints the statement instead of a blank page
+      const lPrintBtn = document.getElementById('ledger-print-btn');
+      if (lPrintBtn) {
+        const freshLP = lPrintBtn.cloneNode(true);
+        lPrintBtn.parentNode.replaceChild(freshLP, lPrintBtn);
+        freshLP.addEventListener('click', () => {
+          const sheet = document.getElementById('rojmel-print-sheet');
+          if (!sheet) return window.print();
+          const title = document.getElementById('ledger-party-title')?.innerText || 'પાર્ટી ખાતા સ્ટેટમેન્ટ';
+          const sub = document.getElementById('ledger-party-sub')?.innerText || '';
+          const td = document.getElementById('ledger-tot-debit')?.innerText || '₹ 0';
+          const tc = document.getElementById('ledger-tot-credit')?.innerText || '₹ 0';
+          const tbLbl = document.getElementById('ledger-tot-bal-label')?.innerText || 'ચોખ્ખું બેલેન્સ';
+          const tbVal = document.getElementById('ledger-tot-bal')?.innerText || '₹ 0';
+          const tbodyHtml = document.getElementById('ledger-tbody')?.innerHTML || '';
+          sheet.innerHTML = `<div style="font-family:'Noto Sans Gujarati',sans-serif;max-width:760px;margin:0 auto">
+            <h2 style="margin:0 0 4px;color:#0D2C4D;font-size:20px">Raj Trading Company — ${title}</h2>
+            <div style="font-size:12px;color:#475569;margin-bottom:12px">${sub}</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+              <tr>
+                <td style="padding:8px;border:1px solid #cbd5e1">કુલ ઉધાર / વેચાણ (+): <b>${td}</b></td>
+                <td style="padding:8px;border:1px solid #cbd5e1">કુલ જમા / ખરીદી (-): <b>${tc}</b></td>
+                <td style="padding:8px;border:1px solid #cbd5e1;background:#FEF3C7">${tbLbl}: <b>${tbVal}</b></td>
+              </tr>
+            </table>
+            <table style="width:100%;border-collapse:collapse;font-size:12px" border="1" cellspacing="0" cellpadding="6">
+              <thead><tr style="background:#0D2C4D;color:#fff"><th style="padding:6px;text-align:left">તારીખ</th><th style="padding:6px;text-align:left">વિગત</th><th style="padding:6px;text-align:right">ઉધાર (+)</th><th style="padding:6px;text-align:right">જમા (-)</th><th style="padding:6px;text-align:right">બેલેન્સ</th></tr></thead>
+              <tbody>${tbodyHtml}</tbody>
+            </table>
+          </div>`;
+          document.body.classList.add('printing-rojmel');
+          const cleanup = () => { document.body.classList.remove('printing-rojmel'); };
+          window.addEventListener('afterprint', cleanup, { once: true });
+          setTimeout(() => { window.print(); setTimeout(cleanup, 1200); }, 100);
+        });
+      }
+
+      window.cleanAndNormalizeState();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      if (typeof renderAll === 'function') renderAll();
+      if (typeof pushToCloudNow === 'function') setTimeout(() => pushToCloudNow(false), 600);
     })();
   </script>
 </body>
