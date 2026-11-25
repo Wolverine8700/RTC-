@@ -1481,12 +1481,22 @@
     }
     function fmtDate(d) {
       if (!d) return '';
-      const p = String(d).split('-');
-      return p.length === 3 && p[0].length === 4 ? `${p[2]}-${p[1]}-${p[0]}` : d;
+      const s = String(d).trim();
+      if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+        const dt = new Date(s);
+        if (!isNaN(dt.getTime())) {
+          return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+        }
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const p = s.split('-');
+        return `${p[2]}-${p[1]}-${p[0]}`;
+      }
+      return s;
     }
 
     function numToWords(n) {
-      n = Math.round(Number(n) || 0);
+      n = Math.abs(Math.round(Number(n) || 0));
       const curLang = (typeof window.getLang === 'function' ? window.getLang() : (typeof lang !== 'undefined' ? lang : 'gu'));
       if (curLang !== 'en') {
         if (n === 0) return 'શૂન્ય રૂપિયા પૂરા';
@@ -1503,7 +1513,7 @@
           return (num >= 100 ? g1[Math.floor(num/100)] + ' સો ' : '') + (num % 100 ? g1[num % 100] : '');
         }
         let s = '';
-        if (n >= 10000000) { s += g1[Math.floor(n/10000000)] + ' કરોડ '; n %= 10000000; }
+        if (n >= 10000000) { const cr = Math.floor(n/10000000); s += (cr < 100 ? g1[cr] : String(cr)) + ' કરોડ '; n %= 10000000; }
         if (n >= 100000) { s += g1[Math.floor(n/100000)] + ' લાખ '; n %= 100000; }
         if (n >= 1000) { s += g1[Math.floor(n/1000)] + ' હજાર '; n %= 1000; }
         if (n > 0) s += gThree(n);
@@ -1616,6 +1626,37 @@
       return num;
     }
 
+    function _normItemName(s) {
+      return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+    function findStockItemForRow(r) {
+      if (!r || !Array.isArray(state.items)) return null;
+      if (r.itemId != null && r.itemId !== '') {
+        const byId = state.items.find(x => String(x.id) === String(r.itemId));
+        if (byId) return byId;
+      }
+      const target = _normItemName(r.desc);
+      if (!target) return null;
+      const exact = state.items.find(x => _normItemName(x.name) === target);
+      if (exact) return exact;
+      // Fallback: match longest stock item name that r.desc starts with (e.g. "Komal 2222 (1 Kg)")
+      let best = null;
+      state.items.forEach(x => {
+        const xn = _normItemName(x.name);
+        if (xn && xn.length >= 2 && target.startsWith(xn) && (!best || xn.length > _normItemName(best.name).length)) {
+          best = x;
+        }
+      });
+      return best;
+    }
+    function getRowStockQty(r) {
+      const kg = Number(r && r.kg) || 0;
+      if (kg > 0) return kg;
+      const pkts = Number(r && r.pkts) || 0;
+      if (pkts > 0) return +(pkts * parsePackNum(r.pack)).toFixed(4);
+      return 0;
+    }
+
     function renderBillRows() {
       let idl = document.getElementById('bill-items-datalist');
       if (!idl) {
@@ -1653,8 +1694,9 @@
           row[f] = e.target.value;
 
           if (f === 'desc') {
-            const matched = (state.items || []).find(it => String(it.name || '').trim().toLowerCase() === String(e.target.value || '').trim().toLowerCase());
+            const matched = (state.items || []).find(it => _normItemName(it.name) === _normItemName(e.target.value));
             if (matched) {
+              row.itemId = matched.id;
               const rateTier = document.getElementById('bill-rate-type')?.value || 'retail';
               const ws = Number(matched.wholesaleRate);
               const rt = rateTier === 'wholesale' && ws > 0 ? ws : (Number(matched.rate) || 0);
@@ -1837,13 +1879,33 @@
       if (document.getElementById('bill-paid-now')) document.getElementById('bill-paid-now').value = '';
       if (document.getElementById('bill-partial-box')) document.getElementById('bill-partial-box').classList.add('hidden');
       if (document.getElementById('bill-collection-date')) document.getElementById('bill-collection-date').value = '';
+      let stockUpdatedCount = 0;
       state.draftRows.forEach(r => {
-        const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
+        const qty = getRowStockQty(r);
+        if (qty <= 0) return;
+        let it = findStockItemForRow(r);
         if (it) {
-          const qty = Number(r.kg)||0;
+          r.itemId = it.id;
           const delta = (kind === 'Purchase' || kind === 'Return') ? qty : -qty;
-          it.stock = Math.max(0, (Number(it.stock)||0) + delta);
+          it.stock = +Math.max(0, (Number(it.stock) || 0) + delta).toFixed(2);
           it.updatedAt = Date.now();
+          stockUpdatedCount++;
+        } else if ((kind === 'Purchase' || kind === 'Return') && String(r.desc || '').trim()) {
+          const newIt = {
+            id: Date.now() + stockUpdatedCount + 10,
+            updatedAt: Date.now(),
+            deleted: false,
+            name: String(r.desc).trim(),
+            pack: r.pack || '1 Kg',
+            rate: Number(r.rate) || 0,
+            wholesaleRate: Number(r.rate) || 0,
+            stock: +qty.toFixed(2),
+            batch: '',
+            expiry: ''
+          };
+          state.items.push(newIt);
+          r.itemId = newIt.id;
+          stockUpdatedCount++;
         }
       });
       if (document.getElementById('bill-orig-no')) document.getElementById('bill-orig-no').value = '';
@@ -1856,7 +1918,8 @@
       const _tParts = ['બિલ'];
       if (autoReceiptCreated) _tParts.push(`ઓટો રસીદ (₹${autoReceiptAmt.toFixed(0)})`);
       if (newPartyAdded) _tParts.push('નવી પાર્ટી');
-      showToast(_tParts.length > 1 ? (_tParts.join(' + ') + ' સેવ થઈ ગઈ ✔') : 'બિલ સફળતાપૂર્વક સેવ થઈ ગયું! ✔');
+      if (stockUpdatedCount > 0) _tParts.push('સ્ટોક અપડેટ');
+      showToast(_tParts.length > 1 ? (_tParts.join(' + ') + ' ✔') : 'બિલ સફળતાપૂર્વક સેવ થઈ ગયું! ✔');
     });
 
     document.getElementById('print-bill-btn').addEventListener('click', () => window.print());
@@ -2008,11 +2071,11 @@
               });
             }
             (billObj.rows || []).forEach(r => {
-              const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
+              const it = findStockItemForRow(r);
               if (it) {
-                const qty = Number(r.kg)||0;
+                const qty = getRowStockQty(r);
                 const rev = (kind === 'Purchase' || kind === 'Return') ? -qty : qty;
-                it.stock = Math.max(0, (Number(it.stock)||0) + rev);
+                it.stock = +Math.max(0, (Number(it.stock) || 0) + rev).toFixed(2);
                 it.updatedAt = Date.now();
               }
             });
@@ -2294,6 +2357,7 @@
           const f = e.target.dataset.f;
           if (it && f) {
             it[f] = (f === 'rate' || f === 'stock') ? (Number(e.target.value) || 0) : e.target.value.trim();
+            it.updatedAt = Date.now();
             saveState(); renderAll(); showToast('સ્ટોક આઇટમ અપડેટ થઈ ✔');
           }
         });
@@ -2301,13 +2365,13 @@
       document.querySelectorAll('.min-stock-input').forEach(inp => {
         inp.addEventListener('change', e => {
           const it = (state.items || []).find(x => String(x.id) === String(e.target.dataset.minItem));
-          if (it) { it.minStock = Number(e.target.value) || 0; saveState(); renderAll(); showToast('એલર્ટ મર્યાદા સેવ થઈ ✔'); }
+          if (it) { it.minStock = Number(e.target.value) || 0; it.updatedAt = Date.now(); saveState(); renderAll(); showToast('એલર્ટ મર્યાદા સેવ થઈ ✔'); }
         });
       });
       document.querySelectorAll('.ws-rate-input').forEach(inp => {
         inp.addEventListener('change', e => {
           const it = (state.items || []).find(x => String(x.id) === String(e.target.dataset.wsItem));
-          if (it) { it.wholesaleRate = Number(e.target.value) || 0; saveState(); renderAll(); showToast('હોલસેલ ભાવ સેવ થયો ✔'); }
+          if (it) { it.wholesaleRate = Number(e.target.value) || 0; it.updatedAt = Date.now(); saveState(); renderAll(); showToast('હોલસેલ ભાવ સેવ થયો ✔'); }
         });
       });
       document.querySelectorAll('.del-item').forEach(btn => {
@@ -2462,9 +2526,11 @@
     });
 
     function monthKey(dStr) {
+      const iso = typeof toISODateKey === 'function' ? toISODateKey(dStr) : '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return `${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
       const s = fmtDate(dStr);
-      const p = s.split('-');
-      return p.length === 3 ? `${p[1]}-${p[2]}` : 'Other';
+      const p = String(s).split(/[-/]/);
+      return p.length === 3 && p[2].length === 4 ? `${p[1].padStart(2,'0')}-${p[2]}` : 'Other';
     }
 
     function renderReports() {
@@ -2556,7 +2622,12 @@
 
       const tb = document.getElementById('monthly-reports-tbody');
       if (!tb) return;
-      const keys = Object.keys(map);
+      const keys = Object.keys(map).sort((a, b) => {
+        const pa = a.split('-'), pb = b.split('-');
+        const ka = pa.length === 2 ? pa[1] + pa[0] : '000000';
+        const kb = pb.length === 2 ? pb[1] + pb[0] : '000000';
+        return kb.localeCompare(ka);
+      });
       tb.innerHTML = keys.length ? '' : '<tr><td colspan="6" class="p-3 text-center text-slate-400">હજુ કોઈ માસિક ડેટા ઉપલબ્ધ નથી.</td></tr>';
       keys.forEach(m => {
         const r = map[m];
@@ -2580,7 +2651,7 @@
         if (tds.length === 6) csv += Array.from(tds).map(td => `"${td.textContent.replace(/₹ /g,'')}"`).join(',') + '\n';
       });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
       a.download = 'ITR_Profit_Loss_Monthly_Report.csv';
       a.click();
     });
@@ -2591,7 +2662,7 @@
         csv += `"${b.no}","${fmtDate(b.date)}","${b.kind||'Sales'}","${b.buyer}","${b.payment}","Exempted Agro Commodities / Cattle Feed &amp; Seeds",${b.total}\n`;
       });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
       a.download = 'GST_Sales_Purchase_Register.csv';
       a.click();
     });
@@ -2930,7 +3001,13 @@
     function toISODateKey(d) {
       if (!d) return '';
       const s = String(d).trim();
-      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+        const dt = new Date(s);
+        if (!isNaN(dt.getTime())) {
+          return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        }
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
       const p = s.split(/[-/]/);
       if (p.length === 3 && p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
       const dt = new Date(s);
@@ -3173,7 +3250,12 @@
         if (match) {
           if (!document.getElementById('buyer-name').value) document.getElementById('buyer-name').value = match.buyer || '';
           if (!document.getElementById('buyer-phone').value) document.getElementById('buyer-phone').value = match.phone || '';
-          showToast(`મૂળ બિલ ${match.no} (${match.buyer}) સામે જમા લિંક થયું ✔`);
+          const hasOnlyBlankRow = !state.draftRows.length || (state.draftRows.length === 1 && !String(state.draftRows[0].desc || '').trim());
+          if (hasOnlyBlankRow && Array.isArray(match.rows) && match.rows.length > 0) {
+            state.draftRows = JSON.parse(JSON.stringify(match.rows));
+            if (typeof renderBillRows === 'function') renderBillRows();
+          }
+          showToast(`મૂળ બિલ ${match.no} (${match.buyer}) ની આઇટમો લોડ થઈ ✔`);
         }
         syncPreview();
       });
@@ -3654,9 +3736,9 @@
 
         // Replace first empty row if only 1 blank row exists, else push new row
         if (state.draftRows.length === 1 && !state.draftRows[0].desc && Number(state.draftRows[0].rate || 0) === 0) {
-          state.draftRows[0] = { desc: it.name || '', pack: it.pack || '1 Kg', pkts: 1, kg: defaultKg, rate: chosenRate };
+          state.draftRows[0] = { itemId: it.id, desc: it.name || '', pack: it.pack || '1 Kg', pkts: 1, kg: defaultKg, rate: chosenRate };
         } else {
-          state.draftRows.push({ desc: it.name || '', pack: it.pack || '1 Kg', pkts: 1, kg: defaultKg, rate: chosenRate });
+          state.draftRows.push({ itemId: it.id, desc: it.name || '', pack: it.pack || '1 Kg', pkts: 1, kg: defaultKg, rate: chosenRate });
         }
         e.target.value = '';
         if (typeof renderBillRows === 'function') renderBillRows();
@@ -3841,10 +3923,12 @@
         if (oldIdx !== -1) {
           const ob = state.bills[oldIdx];
           (ob.rows || []).forEach(r => {
-            const it = (state.items || []).find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
+            const it = typeof findStockItemForRow === 'function' ? findStockItemForRow(r) : null;
             if (it) {
-              if ((ob.kind || 'Sales') === 'Purchase' || ob.kind === 'Return') it.stock = Math.max(0, (Number(it.stock)||0) - (Number(r.kg)||0));
-              else it.stock = (Number(it.stock)||0) + (Number(r.kg)||0);
+              const qty = typeof getRowStockQty === 'function' ? getRowStockQty(r) : (Number(r.kg) || 0);
+              const rev = ((ob.kind || 'Sales') === 'Purchase' || ob.kind === 'Return') ? -qty : qty;
+              it.stock = +Math.max(0, (Number(it.stock) || 0) + rev).toFixed(2);
+              it.updatedAt = Date.now();
             }
           });
           if ((ob.payment === 'Credit' || ob.payment === 'Partial') && ob.buyer) {
