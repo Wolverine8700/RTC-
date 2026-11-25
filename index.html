@@ -1475,6 +1475,10 @@
 
     
     
+    function getLocalISO(d) {
+      const dt = d ? new Date(d) : new Date();
+      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    }
     function fmtDate(d) {
       if (!d) return '';
       const p = String(d).split('-');
@@ -1601,8 +1605,15 @@
     });
 
     function parsePackNum(packStr) {
-      const m = String(packStr || '').match(/([0-9]+(?:\.[0-9]+)?)/);
-      return m ? Number(m[1]) : 1;
+      const s = String(packStr || '').trim();
+      const m = s.match(/([0-9]+(?:\.[0-9]+)?)/);
+      if (!m) return 1;
+      const num = Number(m[1]);
+      // Convert grams / ml to Kg / Liter so 500 gm = 0.5 Kg, 250 g = 0.25 Kg, 100 ml = 0.1 L
+      if (/(?:(?:\b|\d)\s*(?:gm|gms|g|gram|grams|ml)\b|ગ્રામ|મિલી)/i.test(s) && !/(?:(?:\b|\d)\s*kg\b|કિલો)/i.test(s)) {
+        return +(num / 1000).toFixed(4);
+      }
+      return num;
     }
 
     function renderBillRows() {
@@ -1612,7 +1623,8 @@
         idl.id = 'bill-items-datalist';
         document.body.appendChild(idl);
       }
-      idl.innerHTML = (state.items || []).map(it => `<option value="${it.name}">`).join('');
+      const _escAttr = v => String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      idl.innerHTML = (state.items || []).map(it => `<option value="${_escAttr(it.name)}">`).join('');
 
       const tbody = document.getElementById('bill-rows');
       tbody.innerHTML = '';
@@ -1622,8 +1634,8 @@
         tr.className = 'border-b border-slate-200';
         tr.innerHTML = `
           <td class="p-2">${i + 1}</td>
-          <td class="p-2"><input data-idx="${i}" data-f="desc" list="bill-items-datalist" type="text" value="${r.desc}" class="row-inp w-full border rounded px-2 py-1 text-sm"></td>
-          <td class="p-2"><input data-idx="${i}" data-f="pack" type="text" value="${r.pack}" class="row-inp w-20 border rounded px-2 py-1 text-sm"></td>
+          <td class="p-2"><input data-idx="${i}" data-f="desc" list="bill-items-datalist" type="text" value="${_escAttr(r.desc)}" class="row-inp w-full border rounded px-2 py-1 text-sm"></td>
+          <td class="p-2"><input data-idx="${i}" data-f="pack" type="text" value="${_escAttr(r.pack)}" class="row-inp w-20 border rounded px-2 py-1 text-sm"></td>
           <td class="p-2"><input data-idx="${i}" data-f="pkts" type="number" step="any" value="${r.pkts}" class="row-inp w-16 border rounded px-2 py-1 text-sm text-right font-bold"></td>
           <td class="p-2"><input data-idx="${i}" data-f="kg" type="number" step="any" value="${r.kg}" class="row-inp w-20 border rounded px-2 py-1 text-sm text-right font-bold text-[#0D2C4D]"></td>
           <td class="p-2"><input data-idx="${i}" data-f="rate" type="number" step="any" value="${r.rate}" class="row-inp w-20 border rounded px-2 py-1 text-sm text-right font-bold"></td>
@@ -1699,8 +1711,11 @@
       if (!Array.isArray(state.parties)) state.parties = [];
       if (!Array.isArray(state.payments)) state.payments = [];
       if (!Array.isArray(state.items)) state.items = [];
-      const buyer = document.getElementById('buyer-name').value.trim() || 'રોકડ ગ્રાહક';
+      const rawBuyer = document.getElementById('buyer-name').value.trim();
+      const buyer = rawBuyer || 'રોકડ ગ્રાહક';
+      const buyerCity = (document.getElementById('buyer-addr')?.value || '').trim();
       const total = state.draftRows.reduce((s, r) => s + (Number(r.kg)||0)*(Number(r.rate)||0), 0);
+      if (total <= 0) return showToast('કૃપા કરીને ઓછામાં ઓછી ૧ આઇટમ અને સાચો ભાવ દાખલ કરો');
       const pay = document.getElementById('bill-payment').value;
       const kind = document.getElementById('bill-kind').value;
       const collectionDate = (document.getElementById('bill-collection-date') && document.getElementById('bill-collection-date').value) || '';
@@ -1710,16 +1725,42 @@
         no: document.getElementById('bill-no').value,
         date: fmtDate(document.getElementById('bill-date').value),
         buyer,
-        phone: document.getElementById('buyer-phone').value,
+        phone: (document.getElementById('buyer-phone')?.value || '').trim(),
         payment: pay,
         collectionDate,
         origBillNo: (document.getElementById('bill-orig-no') && document.getElementById('bill-orig-no').value.trim()) || '',
-        returnReason: (document.getElementById('bill-return-reason') && document.getElementById('bill-return-reason').value.trim()) || '', 
+        returnReason: (document.getElementById('bill-return-reason') && document.getElementById('bill-return-reason').value.trim()) || '',
         total,
-        rows: JSON.parse(JSON.stringify(state.draftRows))
+        rows: JSON.parse(JSON.stringify(state.draftRows)),
+        updatedAt: Date.now()
       };
       state.bills.unshift(bill);
+
+      // Auto-add new party to Party List whenever a real party name is entered (Cash, UPI, Bank, Credit, Partial, Purchase, Return)
+      let newPartyAdded = false;
+      let partyObj = null;
+      if (rawBuyer && rawBuyer !== 'રોકડ ગ્રાહક') {
+        partyObj = state.parties.find(x => String(x.name || '').trim().toLowerCase() === rawBuyer.toLowerCase());
+        if (!partyObj) {
+          partyObj = {
+            id: Date.now() + 2,
+            name: rawBuyer,
+            phone: bill.phone,
+            city: buyerCity,
+            due: 0,
+            dueDate: '',
+            updatedAt: Date.now()
+          };
+          state.parties.push(partyObj);
+          newPartyAdded = true;
+        } else {
+          if (!partyObj.phone && bill.phone) { partyObj.phone = bill.phone; partyObj.updatedAt = Date.now(); }
+          if (!partyObj.city && buyerCity) { partyObj.city = buyerCity; partyObj.updatedAt = Date.now(); }
+        }
+      }
+
       let autoReceiptCreated = false;
+      let autoReceiptAmt = 0;
       const paidNow = pay === 'Partial' ? Math.min(total, Math.max(0, Number(document.getElementById('bill-paid-now')?.value || 0))) : 0;
       const partialMode = document.getElementById('bill-partial-mode')?.value || 'Cash';
       if (pay === 'Partial') {
@@ -1727,37 +1768,71 @@
         bill.dueAmount = Math.max(0, total - paidNow);
         bill.partialMode = partialMode;
       }
-      if (kind === 'Return') {
-        let p = state.parties.find(x => String(x.name || '').toLowerCase() === buyer.toLowerCase());
-        if (p) { p.due = (Number(p.due)||0) - total; }
-      } else if (kind === 'PurchaseReturn') {
-        let p = state.parties.find(x => String(x.name || '').toLowerCase() === buyer.toLowerCase());
-        if (p) { p.due = (Number(p.due)||0) + total; }
-      } else if ((pay === 'Credit' || pay === 'Partial') && (kind === 'Sales' || kind === 'Purchase')) {
-        const remDue = pay === 'Partial' ? Math.max(0, total - paidNow) : total;
-        let p = state.parties.find(x => String(x.name || '').toLowerCase() === buyer.toLowerCase());
+      // Unified Party Due & Auto-Receipt / Auto-Voucher for ALL 4 bill kinds: Sales, Purchase, Return (વેચાણ પરત), PurchaseReturn (ખરીદ માલ પરત)
+      const isCreditOrPartial = (pay === 'Credit' || pay === 'Partial');
+      const remDue = pay === 'Partial' ? Math.max(0, total - paidNow) : (pay === 'Credit' ? total : 0);
+      const isDuePositive = (kind === 'Sales' || kind === 'PurchaseReturn'); // increases receivable / reduces payable
+      const receiptType = (kind === 'Sales' || kind === 'PurchaseReturn') ? 'In' : 'Out';
+
+      if (isCreditOrPartial) {
+        let p = partyObj || state.parties.find(x => String(x.name || '').trim().toLowerCase() === buyer.toLowerCase());
         if (!p) {
-          p = { id: Date.now(), name: buyer, phone: bill.phone, city: document.getElementById('buyer-addr').value, due: 0, dueDate: '' };
+          p = { id: Date.now() + 2, name: buyer, phone: bill.phone, city: buyerCity, due: 0, dueDate: '', updatedAt: Date.now() };
           state.parties.push(p);
+          newPartyAdded = true;
         }
         if (remDue > 0) {
-          p.due = (Number(p.due) || 0) + (kind === 'Purchase' ? -remDue : remDue);
-          if (collectionDate) p.dueDate = collectionDate;
+          p.due = (Number(p.due) || 0) + (isDuePositive ? remDue : -remDue);
+          if (collectionDate && kind === 'Sales') p.dueDate = collectionDate;
+          p.updatedAt = Date.now();
         }
         if (pay === 'Partial' && paidNow > 0) {
-          const pType = kind === 'Purchase' ? 'Out' : 'In';
+          const partialLabels = {
+            Sales: `વેચાણ બિલ ${bill.no} પાર્શિયલ જમા`,
+            Purchase: `ખરીદ બિલ ${bill.no} પાર્શિયલ ચૂકવણી`,
+            Return: `વેચાણ પરત ${bill.no} પાર્શિયલ રિફંડ`,
+            PurchaseReturn: `ખરીદ પરત ${bill.no} પાર્શિયલ રિફંડ જમા`
+          };
           state.payments.unshift({
             id: Date.now() + 1,
-            no: getNextPayNo(pType),
+            no: getNextPayNo(receiptType),
             date: bill.date,
-            type: pType,
+            type: receiptType,
             party: buyer,
             mode: partialMode,
-            note: `બિલ ${bill.no} પાર્શિયલ પેમેન્ટ`,
-            amount: paidNow
+            note: partialLabels[kind] || `બિલ ${bill.no} પાર્શિયલ પેમેન્ટ`,
+            amount: paidNow,
+            forCashBill: false,
+            linkedBillId: bill.id,
+            updatedAt: Date.now()
           });
           autoReceiptCreated = true;
+          autoReceiptAmt = paidNow;
         }
+      } else if (total > 0) {
+        // Immediate payment (Cash / UPI / Bank Transfer / Cheque) for ALL 4 kinds -> Auto Receipt/Voucher with forCashBill:true (no double-count in Rojmel/Khata)
+        const modeLabel = pay === 'Cash' ? 'રોકડ' : (pay || 'Cash');
+        const cashLabels = {
+          Sales: `વેચાણ બિલ ${bill.no} ${modeLabel} જમા (Auto Receipt)`,
+          Purchase: `ખરીદ બિલ ${bill.no} ${modeLabel} ચૂકવણી (Auto Voucher)`,
+          Return: `વેચાણ પરત ${bill.no} ${modeLabel} રિફંડ (Auto Voucher)`,
+          PurchaseReturn: `ખરીદ પરત ${bill.no} ${modeLabel} રિફંડ જમા (Auto Receipt)`
+        };
+        state.payments.unshift({
+          id: Date.now() + 1,
+          no: getNextPayNo(receiptType),
+          date: bill.date,
+          type: receiptType,
+          party: buyer,
+          mode: pay || 'Cash',
+          note: cashLabels[kind] || `બિલ ${bill.no} (${modeLabel})`,
+          amount: total,
+          forCashBill: true,
+          linkedBillId: bill.id,
+          updatedAt: Date.now()
+        });
+        autoReceiptCreated = true;
+        autoReceiptAmt = total;
       }
       if (document.getElementById('bill-paid-now')) document.getElementById('bill-paid-now').value = '';
       if (document.getElementById('bill-partial-box')) document.getElementById('bill-partial-box').classList.add('hidden');
@@ -1778,7 +1853,10 @@
       saveState();
       if (typeof renderPaymentsTable === 'function') renderPaymentsTable();
       renderAll();
-      showToast(autoReceiptCreated ? `બિલ + ઓટો રસીદ (₹${paidNow}) સેવ થઈ ગઈ ✔` : 'બિલ સફળતાપૂર્વક સેવ થઈ ગયું! ✔');
+      const _tParts = ['બિલ'];
+      if (autoReceiptCreated) _tParts.push(`ઓટો રસીદ (₹${autoReceiptAmt.toFixed(0)})`);
+      if (newPartyAdded) _tParts.push('નવી પાર્ટી');
+      showToast(_tParts.length > 1 ? (_tParts.join(' + ') + ' સેવ થઈ ગઈ ✔') : 'બિલ સફળતાપૂર્વક સેવ થઈ ગયું! ✔');
     });
 
     document.getElementById('print-bill-btn').addEventListener('click', () => window.print());
@@ -1786,17 +1864,30 @@
     document.getElementById('add-party-btn').addEventListener('click', () => {
       const name = document.getElementById('party-name').value.trim();
       if (!name) return showToast('કૃપા કરીને પાર્ટીનું નામ લખો');
-      state.parties.push({
-        id: Date.now(),
-        name,
-        phone: document.getElementById('party-phone').value.trim(),
-        city: document.getElementById('party-city').value.trim(),
-        due: 0
-      });
+      const ph = document.getElementById('party-phone').value.trim();
+      const ct = document.getElementById('party-city').value.trim();
+      const existing = (state.parties || []).find(x => String(x.name || '').trim().toLowerCase() === name.toLowerCase());
+      if (existing) {
+        if (ph) existing.phone = ph;
+        if (ct) existing.city = ct;
+        existing.updatedAt = Date.now();
+        showToast('આ પાર્ટી પહેલેથી છે — વિગત અપડેટ થઈ ગઈ ✔');
+      } else {
+        state.parties.push({
+          id: Date.now(),
+          updatedAt: Date.now(),
+          deleted: false,
+          name,
+          phone: ph,
+          city: ct,
+          due: 0
+        });
+        showToast('પાર્ટી ખાતું ઉમેરાયું ✔');
+      }
       document.getElementById('party-name').value = '';
       document.getElementById('party-phone').value = '';
       document.getElementById('party-city').value = '';
-      saveState(); renderAll(); showToast('પાર્ટી ખાતું ઉમેરાયું ✔');
+      saveState(); renderAll();
     });
 
     function updateItemStockCalc() {
@@ -1831,30 +1922,46 @@
       const wsInpVal = document.getElementById('item-wholesale')?.value;
       const wholesaleRate = (wsInpVal !== undefined && wsInpVal !== '' && Number(wsInpVal) > 0) ? Number(wsInpVal) : retailRate;
 
-      state.items.push({
-        id: Date.now(),
-        updatedAt: Date.now(),
-        deleted: false,
-        name,
-        pack: rawPack,
-        rate: retailRate,
-        wholesaleRate: wholesaleRate,
-        stock: stockVal,
-        batch: document.getElementById('item-batch')?.value.trim() || '',
-        expiry: document.getElementById('item-expiry')?.value || ''
-      });
+      const batchVal = document.getElementById('item-batch')?.value.trim() || '';
+      const expVal = document.getElementById('item-expiry')?.value || '';
+      const existingIt = (state.items || []).find(x => String(x.name || '').trim().toLowerCase() === name.toLowerCase());
+      if (existingIt) {
+        existingIt.stock = +((Number(existingIt.stock) || 0) + stockVal).toFixed(2);
+        if (rawPack) existingIt.pack = rawPack;
+        if (retailRate > 0) existingIt.rate = retailRate;
+        if (wholesaleRate > 0) existingIt.wholesaleRate = wholesaleRate;
+        if (batchVal) existingIt.batch = batchVal;
+        if (expVal) existingIt.expiry = expVal;
+        existingIt.updatedAt = Date.now();
+        showToast(`"${name}" નો સ્ટોક ઉમેરાયો (કુલ: ${existingIt.stock} Kg) ✔`);
+      } else {
+        state.items.push({
+          id: Date.now(),
+          updatedAt: Date.now(),
+          deleted: false,
+          name,
+          pack: rawPack,
+          rate: retailRate,
+          wholesaleRate: wholesaleRate,
+          stock: stockVal,
+          batch: batchVal,
+          expiry: expVal
+        });
+        showToast('નવી પ્રોડક્ટ ઉમેરાઈ ✔');
+      }
       ['item-name', 'item-pack', 'item-bags', 'item-stock', 'item-rate', 'item-wholesale', 'item-batch', 'item-expiry'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
       document.getElementById('item-stock-calc-hint')?.classList.add('hidden');
-      saveState(); renderAll(); showToast('નવી પ્રોડક્ટ ઉમેરાઈ ✔');
+      saveState(); renderAll();
     });
 
     document.getElementById('export-csv-btn').addEventListener('click', () => {
-      let csv = 'Bill No,Date,Buyer,Payment,Total\n';
-      state.bills.forEach(b => { csv += `"${b.no}","${b.date}","${b.buyer}","${b.payment}",${b.total}\n`; });
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const qCsv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+      let csv = '\uFEFFBill No,Type,Date,Party,Payment,Total\n';
+      state.bills.forEach(b => { csv += `${qCsv(b.no)},${qCsv(b.kind || 'Sales')},${qCsv(b.date)},${qCsv(b.buyer)},${qCsv(b.payment)},${Number(b.total)||0}\n`; });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'Raj_Trading_Company_Bills.csv';
@@ -1883,20 +1990,22 @@
       });
       document.querySelectorAll('.del-bill').forEach(btn => {
         btn.addEventListener('click', e => {
-          const id = Number(e.target.dataset.delBill);
-          const billObj = state.bills.find(b => b.id === id);
+          const id = e.target.dataset.delBill;
+          const billObj = state.bills.find(b => String(b.id) === String(id));
           if (billObj) {
             const kind = billObj.kind || 'Sales';
-            if (kind === 'Return') {
-              const p = state.parties.find(x => String(x.name || '').toLowerCase() === (billObj.buyer || '').toLowerCase());
-              if (p) p.due = (Number(p.due) || 0) + (Number(billObj.total) || 0);
-            } else if (kind === 'PurchaseReturn') {
-              const p = state.parties.find(x => String(x.name || '').toLowerCase() === (billObj.buyer || '').toLowerCase());
-              if (p) p.due = (Number(p.due) || 0) - (Number(billObj.total) || 0);
-            } else if ((billObj.payment === 'Credit' || billObj.payment === 'Partial') && (kind === 'Sales' || kind === 'Purchase')) {
-              const p = state.parties.find(x => String(x.name || '').toLowerCase() === (billObj.buyer || '').toLowerCase());
+            if (billObj.payment === 'Credit' || billObj.payment === 'Partial') {
+              const p = state.parties.find(x => String(x.name || '').trim().toLowerCase() === String(billObj.buyer || '').trim().toLowerCase());
               const revAmt = billObj.payment === 'Partial' ? Number(billObj.dueAmount ?? billObj.total ?? 0) : (Number(billObj.total) || 0);
-              if (p) p.due = (Number(p.due) || 0) + (kind === 'Purchase' ? revAmt : -revAmt);
+              const isPos = (kind === 'Sales' || kind === 'PurchaseReturn');
+              if (p) { p.due = (Number(p.due) || 0) + (isPos ? -revAmt : revAmt); p.updatedAt = Date.now(); }
+            }
+            if (Array.isArray(state.payments)) {
+              state.payments = state.payments.filter(pay => {
+                const isLinked = (pay.linkedBillId === billObj.id || (pay.forCashBill === true && billObj.no && String(pay.note || '').includes(billObj.no)));
+                if (isLinked && typeof window.markRecordDeleted === 'function') window.markRecordDeleted('payments', pay);
+                return !isLinked;
+              });
             }
             (billObj.rows || []).forEach(r => {
               const it = state.items.find(x => String(x.name || '').trim().toLowerCase() === String(r.desc || '').trim().toLowerCase());
@@ -1909,14 +2018,14 @@
             });
           }
           state.bills = state.bills.filter(b => String(b.id) !== String(id));
-          saveState(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true); renderAll(); if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncPreview(); } showToast('બિલ ડિલીટ થયું અને સ્ટોક/ખાતું અપડેટ થયું ✔');
+          saveState(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true); if (typeof renderPaymentsTable === 'function') renderPaymentsTable(); renderAll(); if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncPreview(); } showToast('બિલ ડિલીટ થયું અને સ્ટોક/ખાતું અપડેટ થયું ✔');
         });
       });
     }
 
     function renderAll() {
       const totalSales = state.bills.filter(b => (b.kind || 'Sales') === 'Sales').reduce((s, b) => s + (Number(b.total) || 0), 0) - state.bills.filter(b => b.kind === 'Return').reduce((s, b) => s + (Number(b.total) || 0), 0);
-      const totalPurchase = state.bills.filter(b => b.kind === 'Purchase').reduce((s, b) => s + (Number(b.total) || 0), 0);
+      const totalPurchase = state.bills.filter(b => b.kind === 'Purchase').reduce((s, b) => s + (Number(b.total) || 0), 0) - state.bills.filter(b => b.kind === 'PurchaseReturn').reduce((s, b) => s + (Number(b.total) || 0), 0);
       const payIn = (state.payments || []).filter(p => p.type === 'In').reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const payOut = (state.payments || []).filter(p => p.type === 'Out').reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const totalGet = state.parties.reduce((s, p) => s + (Number(p.due || 0) > 0 ? Number(p.due) : 0), 0);
@@ -1949,7 +2058,7 @@
       if (kGet) kGet.textContent = '₹ ' + totalGet.toFixed(0);
       if (kGive) kGive.textContent = '₹ ' + totalGive.toFixed(0);
       if (kCnt) kCnt.textContent = state.parties.length;
-      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayISO = getLocalISO();
       const remBox = document.getElementById('dashboard-reminders');
       if (remBox) {
         const dueList = state.parties.filter(p => Number(p.due || 0) > 0 && p.dueDate).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -2252,7 +2361,8 @@
     document.getElementById('save-pay-btn').addEventListener('click', () => {
       if (!Array.isArray(state.payments)) state.payments = [];
       if (!Array.isArray(state.parties)) state.parties = [];
-      const party = document.getElementById('pay-party').value.trim() || 'રોકડ પાર્ટી';
+      const rawPayParty = document.getElementById('pay-party').value.trim();
+      const party = rawPayParty || 'રોકડ પાર્ટી';
       const amt = Number(document.getElementById('pay-amount').value) || 0;
       if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
       const typ = document.getElementById('pay-type').value;
@@ -2263,15 +2373,21 @@
         type: typ, party,
         mode: document.getElementById('pay-mode').value,
         note: document.getElementById('pay-note').value.trim(),
-        amount: amt
+        amount: amt,
+        updatedAt: Date.now()
       };
       const matchedCashBill = isReceiptForCashBill(entry);
-      if (matchedCashBill) entry.forCashBill = true;
+      entry.forCashBill = !!matchedCashBill;
       state.payments.unshift(entry);
-      const payPartyObj = state.parties.find(x => String(x.name || '').toLowerCase() === party.toLowerCase());
+      let payPartyObj = state.parties.find(x => String(x.name || '').trim().toLowerCase() === party.toLowerCase());
+      if (!payPartyObj && rawPayParty && rawPayParty !== 'રોકડ પાર્ટી') {
+        payPartyObj = { id: Date.now() + 2, name: rawPayParty, phone: '', city: '', due: 0, dueDate: '', updatedAt: Date.now() };
+        state.parties.push(payPartyObj);
+      }
       if (payPartyObj && !matchedCashBill) {
         if (typ === 'In') payPartyObj.due = (Number(payPartyObj.due) || 0) - amt;
         else payPartyObj.due = (Number(payPartyObj.due) || 0) + amt;
+        payPartyObj.updatedAt = Date.now();
       }
       document.getElementById('pay-no').value = getNextPayNo(typ);
       document.getElementById('pay-amount').value = '';
@@ -2307,16 +2423,20 @@
       });
       document.querySelectorAll('.del-pay').forEach(btn => {
         btn.addEventListener('click', e => {
-          const id = Number(e.target.dataset.delPay);
-          const payObj = (state.payments || []).find(x => x.id === id);
+          const id = e.target.dataset.delPay;
+          const payObj = (state.payments || []).find(x => String(x.id) === String(id));
           if (payObj) {
-            const party = state.parties.find(x => String(x.name || '').toLowerCase() === (payObj.party || '').toLowerCase());
-            if (party) {
-              if (payObj.type === 'In') party.due = (Number(party.due) || 0) + (Number(payObj.amount) || 0);
-              else party.due = (Number(party.due) || 0) - (Number(payObj.amount) || 0);
+            if (typeof window.markRecordDeleted === 'function') window.markRecordDeleted('payments', payObj);
+            if (!isReceiptForCashBill(payObj)) {
+              const party = state.parties.find(x => String(x.name || '').trim().toLowerCase() === String(payObj.party || '').trim().toLowerCase());
+              if (party) {
+                if (payObj.type === 'In') party.due = (Number(party.due) || 0) + (Number(payObj.amount) || 0);
+                else party.due = (Number(party.due) || 0) - (Number(payObj.amount) || 0);
+                party.updatedAt = Date.now();
+              }
             }
           }
-          state.payments = (state.payments || []).filter(x => x.id !== id);
+          state.payments = (state.payments || []).filter(x => String(x.id) !== String(id));
           saveState(); renderPaymentsTable(); renderAll(); if (typeof syncNextDocNumbers === 'function') { syncNextDocNumbers(); syncReceiptPreview(); } showToast('પેમેન્ટ રસીદ ડિલીટ થઈ ગઈ ✔');
         });
       });
@@ -2403,10 +2523,13 @@
         elPnl.className = 'text-2xl font-extrabold mt-1 ' + (pnl >= 0 ? 'text-emerald-700' : 'text-rose-600');
       }
 
-      const cashBills = sBills.filter(b => b.payment === 'Cash').reduce((a,b)=>a+(Number(b.total)||0), 0);
-      const cashPays = (state.payments||[]).filter(p => p.type==='In' && p.mode==='Cash').reduce((a,p)=>a+(Number(p.amount)||0), 0);
-      const bankBills = sBills.filter(b => b.payment === 'Cheque' || b.payment === 'RTGS').reduce((a,b)=>a+(Number(b.total)||0), 0);
-      const bankPays = (state.payments||[]).filter(p => p.type==='In' && p.mode!=='Cash').reduce((a,p)=>a+(Number(p.amount)||0), 0);
+      const isBankPayMode = m => m && m !== 'Cash' && m !== 'Credit' && m !== 'Partial';
+      const cashBills = sBills.filter(b => b.payment === 'Cash').reduce((a,b)=>a+(Number(b.total)||0), 0)
+        + prBills.filter(b => b.payment === 'Cash').reduce((a,b)=>a+(Number(b.total)||0), 0);
+      const cashPays = (state.payments||[]).filter(p => p.type==='In' && p.mode==='Cash' && !isReceiptForCashBill(p)).reduce((a,p)=>a+(Number(p.amount)||0), 0);
+      const bankBills = sBills.filter(b => isBankPayMode(b.payment)).reduce((a,b)=>a+(Number(b.total)||0), 0)
+        + prBills.filter(b => isBankPayMode(b.payment)).reduce((a,b)=>a+(Number(b.total)||0), 0);
+      const bankPays = (state.payments||[]).filter(p => p.type==='In' && isBankPayMode(p.mode) && !isReceiptForCashBill(p)).reduce((a,p)=>a+(Number(p.amount)||0), 0);
       const elCash = document.getElementById('rep-cash-total');
       const elBank = document.getElementById('rep-bank-total');
       if (elCash) elCash.textContent = '₹ ' + (cashBills + cashPays).toFixed(0);
@@ -2474,10 +2597,10 @@
     });
 
     try { loadState(); } catch (e) { console.error('loadState', e); }
-    try { const _pd = document.getElementById('pay-date'); if (_pd) _pd.value = new Date().toISOString().split('T')[0]; } catch (e) {}
+    try { const _pd = document.getElementById('pay-date'); if (_pd) _pd.value = getLocalISO(); } catch (e) {}
     try { renderPaymentsTable(); } catch (e) { console.error('renderPaymentsTable', e); }
     try { syncReceiptPreview(); } catch (e) { console.error('syncReceiptPreview', e); }
-    try { const _bd = document.getElementById('bill-date'); if (_bd) _bd.value = new Date().toISOString().split('T')[0]; } catch (e) {}
+    try { const _bd = document.getElementById('bill-date'); if (_bd) _bd.value = getLocalISO(); } catch (e) {}
     try { renderBillRows(); } catch (e) { console.error('renderBillRows', e); }
 
     const expDateInp = document.getElementById('exp-date');
@@ -2503,7 +2626,7 @@
       const pMode = String(pay.mode || 'Cash');
       return (state.bills || []).some(b => {
         const k = b.kind || 'Sales';
-        const matchKind = (pay.type === 'In' && k === 'Sales') || (pay.type === 'Out' && k === 'Purchase');
+        const matchKind = (pay.type === 'In' && (k === 'Sales' || k === 'PurchaseReturn')) || (pay.type === 'Out' && (k === 'Purchase' || k === 'Return'));
         return matchKind
           && b.payment !== 'Credit' && b.payment !== 'Partial'
           && toISODateKey(b.date) === pISO
@@ -2519,9 +2642,13 @@
         const k = b.kind || 'Sales';
         const itemsTxt = (b.rows || []).map(r => `${r.desc}${r.kg ? ' (' + r.kg + 'Kg)' : ''}`).filter(Boolean).join(', ');
         if (k === 'PurchaseReturn') {
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ માલ પરત ${b.no}${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: Number(b.total)||0, credit: 0 });
+          const tot = Number(b.total) || 0;
+          const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
         } else if (k === 'Return') {
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `માલ પરત ${b.no}${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: 0, credit: Number(b.total)||0 });
+          const tot = Number(b.total) || 0;
+          const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `વેચાણ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
         } else if (k === 'Purchase') {
           const tot = Number(b.total) || 0;
           const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
@@ -2599,7 +2726,7 @@
       ctx.fillStyle = '#475569';
       ctx.font = '14px "Noto Sans Gujarati", sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(`ગામ: ${p.city || '-'}  |  મો.: ${p.phone || '-'}  |  તા.: ${fmtDate(new Date().toISOString().slice(0,10))}`, W - 38, 144);
+      ctx.fillText(`ગામ: ${p.city || '-'}  |  મો.: ${p.phone || '-'}  |  તા.: ${fmtDate(getLocalISO())}`, W - 38, 144);
       ctx.textAlign = 'left';
 
       // 3 Summary Boxes
@@ -2830,7 +2957,7 @@
         const pMode = String(p.mode || 'Cash');
         return bills.some(b => {
           const k = b.kind || 'Sales';
-          const matchKind = (p.type === 'In' && k === 'Sales') || (p.type === 'Out' && k === 'Purchase');
+          const matchKind = (p.type === 'In' && (k === 'Sales' || k === 'PurchaseReturn')) || (p.type === 'Out' && (k === 'Purchase' || k === 'Return'));
           return matchKind
             && toISODateKey(b.date) === pISO
             && Math.abs((Number(b.total) || 0) - pAmt) < 0.01
@@ -2849,7 +2976,9 @@
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
         const cRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'Return' && b.payment === 'Cash')
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
-        const cIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && p.mode === 'Cash' && !isDuplicateCashBillReceipt(p, bills))
+        const cPurRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'PurchaseReturn' && b.payment === 'Cash')
+          .reduce((s, b) => s + (Number(b.total) || 0), 0);
+        const cIn = cPurRet + pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && p.mode === 'Cash' && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
         const cOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && p.mode === 'Cash' && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
@@ -2862,7 +2991,9 @@
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
         const bRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'Return' && isBankMode(b.payment))
           .reduce((s, b) => s + (Number(b.total) || 0), 0);
-        const bIn = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && isBankMode(p.mode) && !isDuplicateCashBillReceipt(p, bills))
+        const bPurRet = bills.filter(b => filterFn(toISODateKey(b.date)) && b.kind === 'PurchaseReturn' && isBankMode(b.payment))
+          .reduce((s, b) => s + (Number(b.total) || 0), 0);
+        const bIn = bPurRet + pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'In' && isBankMode(p.mode) && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
         const bOutPay = pays.filter(p => filterFn(toISODateKey(p.date)) && p.type === 'Out' && isBankMode(p.mode) && !isDuplicateCashBillReceipt(p, bills))
           .reduce((s, p) => s + (Number(p.amount) || 0), 0);
@@ -2911,22 +3042,29 @@
     document.addEventListener('click', e => {
       const rp = e.target.closest('.reprint-bill');
       if (rp) {
-        const b = state.bills.find(x => x.id === Number(rp.dataset.reprintBill));
+        const b = state.bills.find(x => String(x.id) === String(rp.dataset.reprintBill));
         if (!b) return;
         document.getElementById('bill-no').value = b.no;
+        if (document.getElementById('bill-date')) document.getElementById('bill-date').value = typeof toISODateKey === 'function' ? toISODateKey(b.date) : b.date;
         document.getElementById('buyer-name').value = b.buyer;
         document.getElementById('buyer-phone').value = b.phone || '';
+        const _pRec = (state.parties || []).find(x => String(x.name || '').trim().toLowerCase() === String(b.buyer || '').trim().toLowerCase());
+        if (document.getElementById('buyer-addr')) document.getElementById('buyer-addr').value = (_pRec && _pRec.city) || '';
+        if (document.getElementById('bill-orig-no')) document.getElementById('bill-orig-no').value = b.origBillNo || '';
+        if (document.getElementById('bill-return-reason')) document.getElementById('bill-return-reason').value = b.returnReason || '';
         document.getElementById('bill-payment').value = b.payment || 'Cash';
         document.getElementById('bill-kind').value = b.kind || 'Sales';
+        document.getElementById('bill-kind')?.dispatchEvent(new Event('change'));
         state.draftRows = JSON.parse(JSON.stringify(b.rows || []));
         renderBillRows(); syncPreview(); switchTab('billing');
         setTimeout(() => window.print(), 350);
       }
       const wb = e.target.closest('.wa-bill');
       if (wb) {
-        const b = state.bills.find(x => x.id === Number(wb.dataset.waBill));
+        const b = state.bills.find(x => String(x.id) === String(wb.dataset.waBill));
         if (!b) return;
-        const lines = [`*Raj Trading Company*`, `બિલ નં.: ${b.no} | તારીખ: ${fmtDate(b.date)}`, `ગ્રાહક: ${b.buyer}`];
+        const kLbl = b.kind === 'Purchase' ? 'ખરીદ બિલ' : (b.kind === 'Return' ? 'વેચાણ માલ પરત' : (b.kind === 'PurchaseReturn' ? 'ખરીદ માલ પરત' : 'બિલ ઓફ સપ્લાય'));
+        const lines = [`*Raj Trading Company*`, `📄 *${kLbl}*`, `બિલ નં.: ${b.no} | તારીખ: ${fmtDate(b.date)}`, `પાર્ટી: ${b.buyer}`];
         (b.rows || []).forEach(r => lines.push(`• ${r.desc} (${r.kg} Kg × ₹${r.rate}) = ₹${((Number(r.kg)||0)*(Number(r.rate)||0)).toFixed(0)}`));
         lines.push(`*કુલ રકમ: ₹${Number(b.total||0).toFixed(0)}* (${b.payment})`);
         lines.push(`આભાર!`);
@@ -2942,7 +3080,7 @@
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `Raj_Backup_${fmtDate(new Date().toISOString().slice(0,10))}.json`;
+        a.download = `Raj_Backup_${fmtDate(getLocalISO())}.json`;
         a.click();
         showToast('ફુલ ડેટા બેકઅપ ફાઇલ ડાઉનલોડ થઈ ✔');
       });
@@ -2958,9 +3096,17 @@
             const parsed = JSON.parse(ev.target.result);
             if (!parsed || !Array.isArray(parsed.bills)) return showToast('અમાન્ય બેકઅપ ફાઇલ');
             state = parsed;
-            if (!state.payments) state.payments = [];
-            if (!state.expenses) state.expenses = [];
-            saveState(); renderAll(); renderDaybook();
+            if (!Array.isArray(state.payments)) state.payments = [];
+            if (!Array.isArray(state.expenses)) state.expenses = [];
+            if (!Array.isArray(state.parties)) state.parties = [];
+            if (!Array.isArray(state.items)) state.items = [];
+            if (!Array.isArray(state.draftRows)) state.draftRows = [];
+            try { if (typeof STORAGE_KEY !== 'undefined') localStorage.removeItem(STORAGE_KEY + '_tombstones_v4'); } catch (e) {}
+            saveState();
+            if (typeof renderPaymentsTable === 'function') renderPaymentsTable();
+            if (typeof syncNextDocNumbers === 'function') syncNextDocNumbers();
+            renderAll(); renderDaybook();
+            e.target.value = '';
             showToast('આખો ડેટા સફળતાપૂર્વક રિસ્ટોર થયો! ✔');
           } catch (err) { showToast('ફાઇલ વાંચવામાં ભૂલ આવી'); }
         };
@@ -3038,7 +3184,7 @@
     const csBadge = document.getElementById('cloud-status-badge');
     if (csBadge) csBadge.addEventListener('click', () => openCloudModal());
     (function checkCollectionReminders() {
-      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayISO = getLocalISO();
       const dueNow = state.parties.filter(p => Number(p.due || 0) > 0 && p.dueDate && p.dueDate <= todayISO);
       if (dueNow.length > 0) {
         const tot = dueNow.reduce((s, p) => s + Number(p.due || 0), 0);
@@ -3325,7 +3471,8 @@
       function buildCurrentBillText() {
         const kind = document.getElementById('bill-kind')?.value || 'Sales';
         const kindLabel = kind === 'Purchase' ? 'ખરીદ બિલ (Purchase)'
-          : kind === 'CreditNote' ? 'જમા પાવતી (Credit Note)'
+          : kind === 'Return' ? 'વેચાણ માલ પરત રસીદ (Sales Return)'
+          : kind === 'PurchaseReturn' ? 'ખરીદ માલ પરત રસીદ (Purchase Return)'
           : 'બિલ ઓફ સપ્લાય (Bill of Supply)';
         const no = document.getElementById('bill-no')?.value || '';
         const dt = document.getElementById('bill-date')?.value || '';
@@ -3400,7 +3547,8 @@
           if (lastBill) {
             const ph = findPartyPhone(lastBill.buyer, lastBill.phone);
             const kindLabel = lastBill.kind === 'Purchase' ? 'ખરીદ બિલ (Purchase)'
-              : lastBill.kind === 'CreditNote' ? 'જમા પાવતી (Credit Note)'
+              : lastBill.kind === 'Return' ? 'વેચાણ માલ પરત રસીદ (Sales Return)'
+              : lastBill.kind === 'PurchaseReturn' ? 'ખરીદ માલ પરત રસીદ (Purchase Return)'
               : 'બિલ ઓફ સપ્લાય (Bill of Supply)';
             const lines = [
               '*' + COMPANY_TITLE + '*',
@@ -3435,7 +3583,7 @@
       document.addEventListener('click', e => {
         const wb = e.target.closest('.wa-pay-row');
         if (!wb) return;
-        const p = (state.payments || []).find(x => x.id === Number(wb.dataset.waPay));
+        const p = (state.payments || []).find(x => String(x.id) === String(wb.dataset.waPay));
         if (p) openWaMessage(findPartyPhone(p.party, ''), buildPayText(p));
       });
     })();
@@ -3502,8 +3650,7 @@
         if (!Array.isArray(state.draftRows)) state.draftRows = [];
         const rateTier = document.getElementById('bill-rate-type')?.value || 'retail';
         const chosenRate = rateTier === 'wholesale' ? (Number(it.wholesaleRate) || Number(it.rate) || 0) : (Number(it.rate) || 0);
-        const packMatch = String(it.pack || '').match(/([0-9.]+)/);
-        const defaultKg = packMatch ? Number(packMatch[1]) : 1;
+        const defaultKg = typeof parsePackNum === 'function' ? parsePackNum(it.pack) : 1;
 
         // Replace first empty row if only 1 blank row exists, else push new row
         if (state.draftRows.length === 1 && !state.draftRows[0].desc && Number(state.draftRows[0].rate || 0) === 0) {
@@ -3603,7 +3750,7 @@
       document.addEventListener('click', e => {
         const wd = e.target.closest('.wa-due-party');
         if (!wd) return;
-        const p = (state.parties || []).find(x => x.id === Number(wd.dataset.waDue));
+        const p = (state.parties || []).find(x => String(x.id) === String(wd.dataset.waDue));
         if (!p) return;
         const ph = String(p.phone || '').replace(/[^0-9]/g, '').slice(-10);
         const msg = '*' + COMP_TITLE + '*\nનમસ્તે *' + p.name + '* 🙏\nઆપની કુલ બાકી રકમ *₹' + Number(p.due || 0).toFixed(0) + '* જમા કરાવવા વિનંતી છે.\nસંપર્ક: રાજ બારોટ (+91 88662 14018)';
@@ -3668,6 +3815,15 @@
         document.getElementById('bill-payment').value = b.payment || 'Cash';
         document.getElementById('buyer-name').value = b.buyer || '';
         document.getElementById('buyer-phone').value = b.phone || '';
+        const _pRec = (state.parties || []).find(x => String(x.name || '').trim().toLowerCase() === String(b.buyer || '').trim().toLowerCase());
+        if (document.getElementById('buyer-addr')) document.getElementById('buyer-addr').value = (_pRec && _pRec.city) || '';
+        if (document.getElementById('bill-collection-date')) document.getElementById('bill-collection-date').value = b.collectionDate || '';
+        if (document.getElementById('bill-orig-no')) document.getElementById('bill-orig-no').value = b.origBillNo || '';
+        if (document.getElementById('bill-return-reason')) document.getElementById('bill-return-reason').value = b.returnReason || '';
+        if (document.getElementById('bill-paid-now')) document.getElementById('bill-paid-now').value = b.payment === 'Partial' ? (b.paidAmount || '') : '';
+        if (document.getElementById('bill-partial-mode') && b.partialMode) document.getElementById('bill-partial-mode').value = b.partialMode;
+        document.getElementById('bill-kind')?.dispatchEvent(new Event('change'));
+        document.getElementById('bill-payment')?.dispatchEvent(new Event('change'));
         state.draftRows = JSON.parse(JSON.stringify(b.rows || []));
         if (typeof renderBillRows === 'function') renderBillRows();
         if (typeof syncPreview === 'function') syncPreview();
@@ -3679,6 +3835,8 @@
       // Capture phase on save-bill-btn: reverse old bill stock & due before normal save runs
       document.getElementById('save-bill-btn')?.addEventListener('click', () => {
         if (!window.editingBillId) return;
+        const _chkTotal = (state.draftRows || []).reduce((s, r) => s + (Number(r.kg)||0)*(Number(r.rate)||0), 0);
+        if (_chkTotal <= 0) return;
         const oldIdx = (state.bills || []).findIndex(x => x.id === window.editingBillId);
         if (oldIdx !== -1) {
           const ob = state.bills[oldIdx];
@@ -3689,13 +3847,23 @@
               else it.stock = (Number(it.stock)||0) + (Number(r.kg)||0);
             }
           });
-          if (ob.payment === 'Credit' && ob.buyer) {
-            const p = (state.parties || []).find(x => String(x.name||'').toLowerCase() === String(ob.buyer||'').toLowerCase());
+          if ((ob.payment === 'Credit' || ob.payment === 'Partial') && ob.buyer) {
+            const p = (state.parties || []).find(x => String(x.name||'').trim().toLowerCase() === String(ob.buyer||'').trim().toLowerCase());
             if (p) {
-              if ((ob.kind || 'Sales') === 'Return') p.due = (Number(p.due)||0) + (Number(ob.total)||0);
-              else if ((ob.kind || 'Sales') === 'Sales') p.due = (Number(p.due)||0) - (Number(ob.total)||0);
-              else if (ob.kind === 'Purchase') p.due = (Number(p.due)||0) + (Number(ob.total)||0);
+              const obKind = ob.kind || 'Sales';
+              const revAmt = ob.payment === 'Partial' ? Number(ob.dueAmount ?? ob.total ?? 0) : (Number(ob.total) || 0);
+              const isPos = (obKind === 'Sales' || obKind === 'PurchaseReturn');
+              p.due = (Number(p.due) || 0) + (isPos ? -revAmt : revAmt);
+              p.updatedAt = Date.now();
             }
+          }
+          // Remove any auto-created receipt linked to the edited bill and mark tombstone so cloud sync doesn't resurrect it
+          if (Array.isArray(state.payments)) {
+            state.payments = state.payments.filter(pay => {
+              const isLinked = (pay.linkedBillId === ob.id || (pay.forCashBill === true && ob.no && String(pay.note || '').includes(ob.no)));
+              if (isLinked && typeof window.markRecordDeleted === 'function') window.markRecordDeleted('payments', pay);
+              return !isLinked;
+            });
           }
           state.bills.splice(oldIdx, 1);
         }
@@ -3992,7 +4160,7 @@
           const blob = new Blob([JSON.stringify(localStorage)], { type: 'application/json' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
-          a.download = 'Raj_Trading_Company_PWA_Backup_' + new Date().toISOString().slice(0, 10) + '.json';
+          a.download = 'Raj_Trading_Company_PWA_Backup_' + getLocalISO() + '.json';
           a.click();
           if (typeof showToast === 'function') showToast('ફુલ બેકઅપ ડાઉનલોડ થયો ✔');
         });
@@ -4029,7 +4197,7 @@
         const bName = document.getElementById('buyer-name')?.value || 'રોકડ ગ્રાહક';
         const bAddr = document.getElementById('buyer-addr')?.value || '';
         const bPh = document.getElementById('buyer-phone')?.value || '';
-        const bDate = fmtDate(document.getElementById('bill-date')?.value || new Date().toISOString().slice(0,10));
+        const bDate = fmtDate(document.getElementById('bill-date')?.value || getLocalISO());
         const bNo = document.getElementById('bill-no')?.value || '01';
         const bKind = document.getElementById('bill-kind')?.value || 'Sales';
         const bPay = document.getElementById('bill-payment')?.value || 'Cash';
@@ -4217,7 +4385,7 @@
         amtEl.className = 'text-lg font-extrabold ' + (dv < 0 ? 'text-rose-700' : (dv > 0 ? 'text-emerald-700' : 'text-slate-700'));
         document.getElementById('pp-type').value = dv < 0 ? 'Out' : 'In';
         document.getElementById('pp-amount').value = prefillFull && absDv > 0 ? absDv.toFixed(0) : '';
-        document.getElementById('pp-date').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('pp-date').value = getLocalISO();
         document.getElementById('pp-note').value = prefillFull ? 'ખાતું પૂરેપૂરું જમા' : 'પાર્શિયલ પેમેન્ટ';
         const _ppo = document.getElementById('partial-pay-modal'); if (_ppo) { _ppo.classList.remove('hidden'); _ppo.style.display = 'flex'; }
         setTimeout(() => document.getElementById('pp-amount')?.focus(), 80);
@@ -4250,7 +4418,7 @@
         if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
         const typ = document.getElementById('pp-type')?.value || 'In';
         const mode = document.getElementById('pp-mode')?.value || 'Cash';
-        const dateVal = fmtDate(document.getElementById('pp-date')?.value || new Date().toISOString().slice(0, 10));
+        const dateVal = fmtDate(document.getElementById('pp-date')?.value || getLocalISO());
         const note = document.getElementById('pp-note')?.value.trim() || 'પાર્શિયલ પેમેન્ટ';
         const recNo = typeof getNextPayNo === 'function' ? getNextPayNo(typ) : ('RTC/CR/' + String((state.payments||[]).length + 1).padStart(3, '0'));
 
@@ -4262,12 +4430,15 @@
           party: p.name,
           mode,
           note,
-          amount: amt
+          amount: amt,
+          forCashBill: false,
+          updatedAt: Date.now()
         });
 
         if (typ === 'In') p.due = (Number(p.due) || 0) - amt;
         else p.due = (Number(p.due) || 0) + amt;
         if (Math.abs(p.due) < 0.01) { p.due = 0; p.dueDate = ''; }
+        p.updatedAt = Date.now();
 
         saveState();
         if (typeof renderPaymentsTable === 'function') renderPaymentsTable();
@@ -4399,7 +4570,7 @@
 
       function buildPLMessage() {
         const items = (state.items || []).filter(it => plSelectedIds.has(it.id));
-        const today = fmtDate(new Date().toISOString().slice(0, 10));
+        const today = fmtDate(getLocalISO());
         const tierLabel = plTier === 'retail' ? 'કસ્ટમર ભાવ લિસ્ટ' : (plTier === 'wholesale' ? 'ડીલર (હોલસેલ) ભાવ લિસ્ટ' : 'રિટેલ & ડીલર ભાવ લિસ્ટ');
         const lines = [
           '🌾 *RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની)*',
@@ -4490,7 +4661,7 @@
         ctx.fillStyle = '#D4AF37'; ctx.font = 'bold 24px "Noto Sans Gujarati", sans-serif';
         ctx.fillText('RAJ TRADING COMPANY (રાજ ટ્રેડિંગ કંપની)', 26, 38);
         ctx.fillStyle = '#E2E8F0'; ctx.font = '14px "Noto Sans Gujarati", sans-serif';
-        ctx.fillText(`તા. ${fmtDate(new Date().toISOString().slice(0,10))} | મુ. પો. મોટીઝેર | +91 88662 14018`, 26, 68);
+        ctx.fillText(`તા. ${fmtDate(getLocalISO())} | મુ. પો. મોટીઝેર | +91 88662 14018`, 26, 68);
         ctx.fillStyle = '#0D2C4D'; ctx.fillRect(24, 110, W - 48, 38);
         ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 13px "Noto Sans Gujarati", sans-serif';
         ctx.fillText('પ્રોડક્ટનું નામ', 38, 134);
@@ -4816,6 +4987,35 @@
         });
         state.bills = uniqueBills;
 
+        // Deduplicate parties with identical name (merge missing phone/city, keep latest updatedAt)
+        const seenPartyName = new Map();
+        const uniqueParties = [];
+        state.parties.forEach(pt => {
+          const pk = String(pt.name || '').trim().toLowerCase();
+          if (!pk) { uniqueParties.push(pt); return; }
+          if (!seenPartyName.has(pk)) {
+            seenPartyName.set(pk, pt);
+            uniqueParties.push(pt);
+          } else {
+            const prev = seenPartyName.get(pk);
+            const prevScore = Number(prev.updatedAt || 0) || Number(prev.id || 0);
+            const curScore = Number(pt.updatedAt || 0) || Number(pt.id || 0);
+            if (curScore > prevScore) {
+              if (!pt.phone && prev.phone) pt.phone = prev.phone;
+              if (!pt.city && prev.city) pt.city = prev.city;
+              addTombstone('parties', prev);
+              const idx = uniqueParties.indexOf(prev);
+              if (idx !== -1) uniqueParties[idx] = pt;
+              seenPartyName.set(pk, pt);
+            } else {
+              if (!prev.phone && pt.phone) prev.phone = pt.phone;
+              if (!prev.city && pt.city) prev.city = pt.city;
+              addTombstone('parties', pt);
+            }
+          }
+        });
+        state.parties = uniqueParties;
+
         // Deduplicate items with identical name
         const seenItemName = new Map();
         const uniqueItems = [];
@@ -4957,7 +5157,7 @@
           if (found) addTombstone('bills', found);
         }
         const delPartyBtn = e.target.closest('.del-party');
-        if (delPartyBtn && delPartyBtn.dataset.delParty) {
+        if (delPartyBtn && delPartyBtn.dataset.delParty && delPartyBtn.dataset.confirm === '1') {
           const id = delPartyBtn.dataset.delParty;
           const found = (state.parties || []).find(x => String(x.id) === String(id));
           if (found) addTombstone('parties', found);

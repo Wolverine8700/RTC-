@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rtc-billing-pwa-v31';
+const CACHE_NAME = 'rtc-billing-pwa-v37';
 const ASSETS = [
   './',
   './index.html',
