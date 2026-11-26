@@ -2,7 +2,7 @@
 <html lang="gu">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0D2C4D">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -94,6 +94,244 @@
     @media print {
       body.printing-rojmel > *:not(#rojmel-print-sheet) { display: none !important; }
       body.printing-rojmel #rojmel-print-sheet { display: block !important; position: static !important; width: 100% !important; background: #fff !important; color: #000 !important; padding: 12px !important; }
+    }
+  </style>
+  <style id="modern-ui-v41">
+    :root {
+      --brand-navy: #0D2C4D;
+      --brand-navy-deep: #081C32;
+      --brand-gold: #D4AF37;
+      --brand-accent: #B45309;
+      --brand-accent-soft: rgba(180, 83, 9, 0.16);
+      --surface-bg: #F1F5F9;
+      --card-border: rgba(15, 23, 42, 0.08);
+    }
+
+    /* === ZERO-ZOOM-BREAK VIEWPORT & BUTTER-SMOOTH NATIVE SCROLL === */
+    html {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip !important;
+      overflow-y: auto !important;
+      height: auto !important;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+      touch-action: manipulation;
+    }
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip !important;
+      overflow-y: visible !important;
+      height: auto !important;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #EEF4FA 0%, #F8FAFC 52%, #FDFCF5 100%) !important;
+      color: #0F172A;
+      overscroll-behavior-x: none;
+      touch-action: manipulation;
+    }
+    main {
+      max-width: 100% !important;
+      overflow: visible !important;
+    }
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+    }
+
+    /* === DESKTOP STICKY SIDEBAR === */
+    @media (min-width: 768px) {
+      aside {
+        position: sticky !important;
+        top: 0 !important;
+        height: 100vh !important;
+        overflow-y: auto;
+      }
+    }
+
+    /* === SLEEK MODERN CARDS & SURFACES === */
+    .tab-panel > div,
+    .tab-panel > .grid > div,
+    main > header {
+      border-radius: 18px !important;
+      border-color: var(--card-border) !important;
+      box-shadow: 0 2px 10px rgba(13, 44, 77, 0.05), 0 1px 2px rgba(13, 44, 77, 0.04) !important;
+    }
+    main > header {
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    input, select, textarea {
+      border-radius: 12px !important;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    /* === MOBILE-FIRST APP SHELL & ZERO AUTO-ZOOM === */
+    @media (max-width: 767px) {
+      /* Prevent iOS/Android auto-zoom on input tap (must be >= 16px) */
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+      select,
+      textarea {
+        font-size: 16px !important;
+        min-height: 42px;
+      }
+      #wa-app-pref {
+        font-size: 13px !important;
+        min-height: 34px !important;
+        padding: 4px 8px !important;
+      }
+
+      /* Compact sticky mobile top app bar */
+      body > aside {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 38 !important;
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 2px solid rgba(212, 175, 55, 0.45) !important;
+        box-shadow: 0 4px 16px rgba(8, 28, 50, 0.22) !important;
+      }
+      body > aside > div:first-child > div:first-child {
+        padding: 10px 14px !important;
+        border-bottom: none !important;
+      }
+      body > aside img {
+        width: 38px !important;
+        height: 38px !important;
+      }
+
+      /* Clean compact mobile header bar */
+      main {
+        padding: 10px 10px 16px 10px !important;
+      }
+      main > header {
+        padding: 12px !important;
+        margin-bottom: 12px !important;
+        gap: 10px !important;
+      }
+      #page-title {
+        font-size: 15px !important;
+        line-height: 1.25 !important;
+      }
+      main > header > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px !important;
+      }
+      main > header button,
+      main > header #cloud-status-badge {
+        min-height: 34px;
+        border-radius: 10px !important;
+      }
+
+      /* Safe bottom spacing for floating dock */
+      body {
+        padding-bottom: calc(5.8rem + env(safe-area-inset-bottom)) !important;
+      }
+
+      /* Floating Glassmorphic Dark Navy Mobile Bottom Dock */
+      #mobile-bottom-nav {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: max(8px, env(safe-area-inset-bottom)) !important;
+        z-index: 45 !important;
+        background: rgba(13, 44, 77, 0.96) !important;
+        backdrop-filter: blur(18px) !important;
+        -webkit-backdrop-filter: blur(18px) !important;
+        border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+        border-radius: 22px !important;
+        padding: 6px 6px !important;
+        box-shadow: 0 10px 30px rgba(7, 24, 43, 0.38) !important;
+        gap: 2px !important;
+      }
+      #mobile-bottom-nav .m-tab-btn {
+        color: rgba(226, 232, 240, 0.85) !important;
+        background: transparent !important;
+        border-radius: 15px !important;
+        padding: 6px 2px !important;
+        min-height: 48px;
+        transition: all 0.18s ease !important;
+      }
+      #mobile-bottom-nav .m-tab-btn.m-nav-active {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.28), rgba(212, 175, 55, 0.12)) !important;
+        color: #FDE68A !important;
+        box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.55) !important;
+        font-weight: 800 !important;
+      }
+      #mobile-bottom-nav .m-tab-btn span:first-child {
+        font-size: 17px !important;
+        line-height: 1.1 !important;
+      }
+      #mobile-bottom-nav .m-tab-btn span:last-child {
+        font-size: 10px !important;
+        margin-top: 2px;
+        letter-spacing: 0.01em;
+      }
+
+      /* Mobile Toast positioned safely at top (never overlaps bottom dock) */
+      #toast {
+        bottom: auto !important;
+        top: 66px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: max-content;
+        max-width: calc(100vw - 24px) !important;
+        text-align: center;
+        z-index: 9998 !important;
+        border-radius: 9999px !important;
+        padding: 10px 18px !important;
+        box-shadow: 0 10px 28px rgba(8, 28, 50, 0.35) !important;
+      }
+
+      /* Mobile Modals: dynamic viewport height & smooth scroll */
+      #party-ledger-modal > div,
+      #cloud-modal > div,
+      #partial-pay-modal > div,
+      #price-list-modal > div,
+      #pin-modal > div {
+        max-height: 90dvh !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        border-radius: 20px !important;
+      }
+    }
+
+    /* === CRITICAL PRINT FIXES (RECEIPT, ROJMEL, LEDGER, PRICE LIST) === */
+    @media print {
+      html, body {
+        max-width: none !important;
+        overflow: visible !important;
+        padding-bottom: 0 !important;
+        background: #FFFFFF !important;
+      }
+      body.printing-rojmel #print-area,
+      body.printing-rojmel #print-area * {
+        display: none !important;
+        visibility: hidden !important;
+      }
+      body.printing-rojmel > *:not(#rojmel-print-sheet) {
+        display: none !important;
+        visibility: hidden !important;
+      }
+      body.printing-rojmel #rojmel-print-sheet,
+      body.printing-rojmel #rojmel-print-sheet * {
+        visibility: visible !important;
+      }
+      body.printing-rojmel #rojmel-print-sheet {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        padding: 10mm !important;
+      }
     }
   </style>
 </head>
@@ -793,6 +1031,7 @@
     <!-- TAB 6: PAYMENT IN / OUT (CASH RECEIPT) -->
     <section id="tab-payments" class="tab-panel hidden space-y-4">
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow space-y-4 no-print">
+        <div id="edit-pay-banner" class="hidden p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-xs font-bold text-amber-900 flex items-center justify-between"><span id="edit-pay-text">✏️ રસીદ એડિટ મોડ</span><button id="cancel-edit-pay" type="button" class="px-2 py-1 rounded bg-white border border-amber-300 text-amber-900 text-[11px]">રદ કરો ✕</button></div>
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
           <h2 class="font-bold text-[#0D2C4D]">કેશ રિસીપ્ટ / પેમેન્ટ In &amp; Out (Cash Receipt &amp; Voucher)</h2>
           <select id="pay-type" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold bg-slate-50">
@@ -845,7 +1084,7 @@
       </div>
 
       <!-- Printable Cash Receipt Preview -->
-      <div id="receipt-print-box" class="space-y-3 text-xs text-slate-900">
+      <div class="overflow-x-auto w-full"><div id="receipt-print-box" class="space-y-3 text-xs text-slate-900 min-w-[320px]">
         
         <div class="border-2 border-[#0D2C4D] rounded-lg p-4 bg-white">
           <div class="flex justify-between items-start border-b-2 border-[#0D2C4D] pb-2 mb-2">
@@ -927,6 +1166,7 @@
           <tbody id="payments-tbody"></tbody>
         </table></div>
       </div>
+    </div>
     </section>
 
     <!-- TAB 7: REPORTS (ITR, GST, MONTHLY SALES/PURCHASE & P&L) -->
@@ -1074,8 +1314,8 @@
           <div id="ledger-tot-bal" class="text-base font-extrabold text-rose-700">₹ 0</div>
         </div>
       </div>
-      <div class="p-4 overflow-y-auto flex-1">
-        <table class="w-full text-xs border-collapse">
+      <div class="p-4 overflow-y-auto overflow-x-auto flex-1">
+        <table class="w-full min-w-[460px] text-xs border-collapse">
           <thead>
             <tr class="bg-slate-100 text-slate-700">
               <th class="p-2 text-left">તારીખ</th>
@@ -1098,8 +1338,8 @@
   </div>
 
   <!-- Mobile Bottom Dock (Single Clean Mobile Nav) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-2xl grid grid-cols-6 py-1.5 px-1 no-print">
-    <button data-tab="dashboard" class="m-tab-btn flex flex-col items-center justify-center text-[10px] font-bold text-[#B45309] py-1 rounded-xl bg-slate-100">
+  <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-2xl grid grid-cols-6 py-1.5 px-1 no-print">
+    <button data-tab="dashboard" class="m-tab-btn m-nav-active flex flex-col items-center justify-center text-[10px] font-bold text-[#B45309] py-1 rounded-xl bg-slate-100">
       <span class="text-base">🏠</span><span>હોમ</span>
     </button>
     <button data-tab="billing" class="m-tab-btn flex flex-col items-center justify-center text-[10px] font-semibold text-slate-500 py-1 rounded-xl">
@@ -1256,7 +1496,11 @@
         if (state && typeof state === 'object') state._lastModified = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         if (isAutoCloudEnabled()) localStorage.setItem(PENDING_SYNC_KEY, '1');
-      } catch (e) {}
+      } catch (e) {
+        if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+          if (typeof showToast === 'function') showToast('⚠️ ફોન સ્ટોરેજ ભરાઈ ગયું છે! Cloud Sync / Backup લો.');
+        }
+      }
       if (!isAutoCloudEnabled()) return;
       clearTimeout(cloudSyncTimer);
       cloudSyncTimer = setTimeout(() => pushToCloudNow(false), 400);
@@ -1285,11 +1529,14 @@
       }
     }, 60000);
 
+    window._v43Esc = function(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
     function showToast(msg) {
       const t = document.getElementById('toast');
+      if (!t) return;
       t.textContent = msg;
       t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 2800);
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => t.classList.add('hidden'), 2800);
     }
 
     function switchTab(tabId) {
@@ -1304,13 +1551,36 @@
       if (activeBtn) { activeBtn.classList.add('nav-active'); activeBtn.classList.remove('text-slate-200'); }
 
       document.querySelectorAll('.m-tab-btn').forEach(b => {
-        b.classList.remove('text-[#B45309]', 'font-bold', 'bg-slate-100');
+        b.classList.remove('text-[#B45309]', 'font-bold', 'bg-slate-100', 'm-nav-active');
         b.classList.add('text-slate-500', 'font-semibold');
       });
       const activeMBtn = document.querySelector(`.m-tab-btn[data-tab="${tabId}"]`);
       if (activeMBtn) {
-        activeMBtn.classList.add('text-[#B45309]', 'font-bold', 'bg-slate-100');
+        activeMBtn.classList.add('text-[#B45309]', 'font-bold', 'bg-slate-100', 'm-nav-active');
         activeMBtn.classList.remove('text-slate-500', 'font-semibold');
+      }
+      const ptEl = document.getElementById('page-title');
+      if (ptEl) {
+        const tabTitlesGu = {
+          dashboard: 'ડેશબોર્ડ — રાજ ટ્રેડિંગ કંપની',
+          billing: 'બિલ ઓફ સપ્લાય — રાજ ટ્રેડિંગ કંપની',
+          'bills-list': 'સેવ કરેલા બિલ — રાજ ટ્રેડિંગ કંપની',
+          payments: 'પેમેન્ટ In/Out (રસીદ) — રાજ ટ્રેડિંગ કંપની',
+          parties: 'પાર્ટી ખાતા (ઉધાર-જમા) — રાજ ટ્રેડિંગ કંપની',
+          reports: 'ITR / GST & P&L રિપોર્ટ્સ — રાજ ટ્રેડિંગ કંપની',
+          items: 'સ્ટોક & આઇટમ્સ — રાજ ટ્રેડિંગ કંપની'
+        };
+        const tabTitlesEn = {
+          dashboard: 'Dashboard — Raj Trading Company',
+          billing: 'Bill of Supply — Raj Trading Company',
+          'bills-list': 'Saved Bills — Raj Trading Company',
+          payments: 'Payment In/Out — Raj Trading Company',
+          parties: 'Party Khata — Raj Trading Company',
+          reports: 'ITR / GST & P&L Reports — Raj Trading Company',
+          items: 'Stock & Items — Raj Trading Company'
+        };
+        const isEn = (typeof lang !== 'undefined' && lang === 'en');
+        ptEl.textContent = (isEn ? tabTitlesEn[tabId] : tabTitlesGu[tabId]) || ptEl.textContent;
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
       renderAll();
@@ -1748,6 +2018,7 @@
     });
 
     document.getElementById('save-bill-btn').addEventListener('click', () => {
+      if (Date.now() - (window._lastBillSaveTs || 0) < 1500) return;
       if (!Array.isArray(state.draftRows)) state.draftRows = [];
       if (!Array.isArray(state.bills)) state.bills = [];
       if (!Array.isArray(state.parties)) state.parties = [];
@@ -1764,10 +2035,11 @@
       const bill = {
         id: Date.now(),
         kind,
-        no: document.getElementById('bill-no').value,
+        no: (document.getElementById('bill-no').value || '').trim() || (typeof getNextBillNo === 'function' ? getNextBillNo(kind) : ('BILL/' + Date.now())),
         date: fmtDate(document.getElementById('bill-date').value),
         buyer,
         phone: (document.getElementById('buyer-phone')?.value || '').trim(),
+        addr: buyerCity,
         payment: pay,
         collectionDate,
         origBillNo: (document.getElementById('bill-orig-no') && document.getElementById('bill-orig-no').value.trim()) || '',
@@ -1912,6 +2184,7 @@
       if (document.getElementById('bill-return-reason')) document.getElementById('bill-return-reason').value = '';
       document.getElementById('bill-no').value = getNextDocNo(kind);
       if (typeof syncNextDocNumbers === 'function') syncNextDocNumbers();
+      window._lastBillSaveTs = Date.now();
       saveState();
       if (typeof renderPaymentsTable === 'function') renderPaymentsTable();
       renderAll();
@@ -2053,7 +2326,16 @@
       });
       document.querySelectorAll('.del-bill').forEach(btn => {
         btn.addEventListener('click', e => {
-          const id = e.target.dataset.delBill;
+          const bEl = e.currentTarget;
+          if (bEl.dataset.confirm !== '1') {
+            bEl.dataset.confirm = '1';
+            bEl._origHtml = bEl.innerHTML;
+            bEl.textContent = '⚠️?';
+            showToast('બિલ ડિલીટ કરવા ફરીથી ટચ કરો');
+            setTimeout(() => { if (bEl && bEl.dataset.confirm === '1') { bEl.dataset.confirm = ''; bEl.innerHTML = bEl._origHtml || '🗑️'; } }, 3200);
+            return;
+          }
+          const id = bEl.dataset.delBill;
           const billObj = state.bills.find(b => String(b.id) === String(id));
           if (billObj) {
             const kind = billObj.kind || 'Sales';
@@ -2110,7 +2392,7 @@
       });
 
       const dl = document.getElementById('party-datalist');
-      dl.innerHTML = state.parties.map(p => `<option value="${p.name}">`).join('');
+      dl.innerHTML = state.parties.map(p => `<option value="${window._v43Esc(p.name)}">`).join('');
       const odl = document.getElementById('orig-bills-datalist');
       if (odl) odl.innerHTML = state.bills.filter(b => (b.kind||'Sales')==='Sales').map(b => `<option value="${b.no}">${b.buyer} — ₹${Number(b.total||0).toFixed(0)} (${fmtDate(b.date)})</option>`).join('');
 
@@ -2157,7 +2439,7 @@
             html += `<div class="p-3 rounded-xl border ${isToday ? 'bg-rose-50/70 border-rose-200' : isOverdue ? 'bg-amber-50/60 border-amber-200' : 'bg-slate-50 border-slate-200'} flex flex-col justify-between gap-2">
               <div class="flex justify-between items-start gap-2">
                 <div>
-                  <div class="font-bold text-sm text-[#0D2C4D]">${p.name}</div>
+                  <div class="font-bold text-sm text-[#0D2C4D]">${window._v43Esc(p.name)}</div>
                   <div class="text-[11px] text-slate-500">${p.city || 'મોટીઝેર'} • ${p.phone || '-'} • તારીખ: <b>${fmtDate(p.dueDate)}</b></div>
                 </div>
                 <div class="text-right">
@@ -2235,7 +2517,7 @@
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-11 h-11 rounded-full ${isGive ? 'bg-rose-700 text-white' : 'bg-[#0D2C4D] text-[#D4AF37]'} font-extrabold flex items-center justify-center text-lg flex-shrink-0">${ini}</div>
                 <div class="min-w-0">
-                  <div data-ledger-party="${p.id}" data-ledger-name="${p.name}" class="open-ledger font-bold text-[#0D2C4D] hover:text-blue-700 cursor-pointer text-sm truncate" title="ખાતાવહી ખોલો">${p.name}</div>
+                  <div data-ledger-party="${p.id}" data-ledger-name="${window._v43Esc(p.name)}" class="open-ledger font-bold text-[#0D2C4D] hover:text-blue-700 cursor-pointer text-sm truncate" title="ખાતાવહી ખોલો">${p.name}</div>
                   <div class="text-xs text-slate-500 truncate">${p.city || 'મોટીઝેર'} • ${p.phone || '-'}</div>
                   ${dStatus ? `<div class="text-[11px] mt-0.5">${dStatus}</div>` : ''}
                 </div>
@@ -2247,7 +2529,7 @@
             </div>
             <div class="flex flex-wrap items-center justify-between gap-1.5 pt-2.5 border-t border-slate-100">
               <div class="flex flex-wrap gap-1.5">
-                <button type="button" data-ledger-party="${p.id}" data-ledger-name="${p.name}" onclick="openPartyLedger(this.dataset.ledgerParty, this.dataset.ledgerName)" class="open-ledger px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold">📒 ખાતાવહી</button>
+                <button type="button" data-ledger-party="${p.id}" data-ledger-name="${window._v43Esc(p.name)}" class="open-ledger px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold">📒 ખાતાવહી</button>
                 <button data-partial-party="${p.id}" class="open-partial-pay px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold">💵 પેમેન્ટ</button>
                 <button data-png-party="${p.id}" class="png-party-btn px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold">📸 ફોટો</button>
                 ${cleanPh ? `<a href="https://wa.me/91${cleanPh.slice(-10)}?text=${waMsg}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold">💬 WA</a>` : ''}
@@ -2270,12 +2552,12 @@
         const dv = Number(p.due || 0);
         const balStr = dv > 0 ? `લેવાના ₹ ${dv.toFixed(0)}` : (dv < 0 ? `આપવાના ₹ ${Math.abs(dv).toFixed(0)}` : '₹ 0 ✔');
         pTbody.innerHTML += `<tr class="border-b border-slate-200">
-          <td class="p-2.5 font-bold">${p.name}</td>
+          <td class="p-2.5 font-bold">${window._v43Esc(p.name)}</td>
           <td class="p-2.5">${p.phone}</td>
           <td class="p-2.5">${p.city}</td>
           <td class="p-2.5 text-right font-bold ${dv>0?'text-emerald-700':dv<0?'text-rose-700':'text-slate-500'}">${balStr}</td>
           <td class="p-2.5 text-center"><input type="date" data-party-duedate="${p.id}" value="${p.dueDate || ''}" class="party-duedate-input border border-slate-300 rounded px-2 py-1 text-xs"></td>
-          <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button type="button" data-ledger-party="${p.id}" data-ledger-name="${p.name}" onclick="openPartyLedger(this.dataset.ledgerParty, this.dataset.ledgerName)" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">📒 ખાતાવહી</button><button data-png-party="${p.id}" class="png-party-btn px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold">📸 ફોટો</button><button data-clear-due="${p.id}" class="clear-due px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">✔ ચોખ્ખું</button><button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️</button></div></td>
+          <td class="p-2.5 text-center"><div class="flex items-center justify-center gap-1.5"><button type="button" data-ledger-party="${p.id}" data-ledger-name="${window._v43Esc(p.name)}" class="open-ledger px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">📒 ખાતાવહી</button><button data-png-party="${p.id}" class="png-party-btn px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold">📸 ફોટો</button><button data-clear-due="${p.id}" class="clear-due px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">✔ ચોખ્ખું</button><button data-del-party="${p.id}" class="del-party px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs font-bold">🗑️</button></div></td>
         </tr>`;
       });
       document.querySelectorAll('.party-duedate-input').forEach(inp => {
@@ -2283,6 +2565,7 @@
           const p = (state.parties || []).find(x => String(x.id) === String(e.target.dataset.partyDuedate));
           if (p) {
             p.dueDate = e.target.value;
+            p.updatedAt = Date.now();
             saveState();
             renderAll();
             showToast(p.dueDate ? `${p.name} ની ઉઘરાણી તારીખ ${fmtDate(p.dueDate)} સેટ થઈ 📅` : `${p.name} ની ઉઘરાણી તારીખ દૂર થઈ`);
@@ -2340,7 +2623,7 @@
         const minS = Number(it.minStock || 50);
         const isLow = Number(it.stock || 0) <= minS;
         iTbody.innerHTML += `<tr class="border-b border-slate-200 ${isLow ? 'bg-rose-50/70' : ''}">
-          <td class="p-2"><input type="text" data-edit-item="${it.id}" data-f="name" value="${it.name}" class="item-edit-inp w-full min-w-[140px] border border-slate-300 rounded px-2 py-1 text-xs font-bold">${isLow ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px]">⚠️ Low Stock</span>' : ''}</td>
+          <td class="p-2"><input type="text" data-edit-item="${it.id}" data-f="name" value="${window._v43Esc(it.name)}" class="item-edit-inp w-full min-w-[140px] border border-slate-300 rounded px-2 py-1 text-xs font-bold">${isLow ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px]">⚠️ Low Stock</span>' : ''}</td>
           <td class="p-2"><input type="text" data-edit-item="${it.id}" data-f="pack" value="${it.pack}" class="item-edit-inp w-20 border border-slate-300 rounded px-2 py-1 text-xs"></td>
           <td class="p-2 text-right"><input type="number" data-edit-item="${it.id}" data-f="rate" value="${it.rate}" class="item-edit-inp w-20 border border-slate-300 rounded px-1.5 py-1 text-xs text-right font-bold"></td>
           <td class="p-2 text-right"><input type="number" data-ws-item="${it.id}" value="${(it.wholesaleRate !== undefined && it.wholesaleRate !== null && it.wholesaleRate !== '' && Number(it.wholesaleRate) > 0) ? it.wholesaleRate : it.rate}" class="ws-rate-input w-20 border border-slate-300 rounded px-1.5 py-1 text-xs text-right font-bold text-blue-700"></td>
@@ -2376,11 +2659,22 @@
       });
       document.querySelectorAll('.del-item').forEach(btn => {
         btn.addEventListener('click', e => {
-          state.items = state.items.filter(x => String(x.id) !== String(e.target.dataset.delItem));
+          const bEl = e.currentTarget;
+          if (bEl.dataset.confirm !== '1') {
+            bEl.dataset.confirm = '1';
+            bEl._origHtml = bEl.innerHTML;
+            bEl.textContent = '⚠️?';
+            showToast('આઇટમ ડિલીટ કરવા ફરીથી ટચ કરો');
+            setTimeout(() => { if (bEl && bEl.dataset.confirm === '1') { bEl.dataset.confirm = ''; bEl.innerHTML = bEl._origHtml || '🗑️'; } }, 3200);
+            return;
+          }
+          state.items = state.items.filter(x => String(x.id) !== String(bEl.dataset.delItem));
           saveState(); renderAll(); if (typeof pushToCloudNow === 'function') pushToCloudNow(true);
+          showToast('આઇટમ ડિલીટ થઈ ✔');
         });
       });
       renderBillsTable();
+      if (typeof renderPaymentsTable === 'function') renderPaymentsTable();
       renderReports();
       if (typeof renderDaybook === "function") renderDaybook();
     }
@@ -2415,14 +2709,35 @@
       document.querySelectorAll('.r-words-val').forEach(el => el.textContent = numToWords(amt));
     }
     ['pay-type','pay-no','pay-date','pay-party','pay-amount','pay-mode','pay-note'].forEach(id => {
-      document.getElementById(id).addEventListener('input', syncReceiptPreview);
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', syncReceiptPreview);
+        el.addEventListener('change', syncReceiptPreview);
+      }
     });
-    document.getElementById('pay-type').addEventListener('input', () => {
-      document.getElementById('pay-no').value = getNextPayNo(document.getElementById('pay-type').value);
+    const _onPayTypeChange = () => {
+      if (!window.editingPayId) {
+        document.getElementById('pay-no').value = getNextPayNo(document.getElementById('pay-type').value);
+      }
       syncReceiptPreview();
-    });
+    };
+    document.getElementById('pay-type').addEventListener('input', _onPayTypeChange);
+    document.getElementById('pay-type').addEventListener('change', _onPayTypeChange);
+
+    function exitPayEditMode() {
+      window.editingPayId = null;
+      document.getElementById('edit-pay-banner')?.classList.add('hidden');
+      const spBtn = document.getElementById('save-pay-btn');
+      if (spBtn) spBtn.textContent = '💾 રસીદ સેવ';
+      document.getElementById('pay-no').value = getNextPayNo(document.getElementById('pay-type')?.value || 'In');
+      document.getElementById('pay-amount').value = '';
+      document.getElementById('pay-note').value = '';
+      syncReceiptPreview();
+    }
+    document.getElementById('cancel-edit-pay')?.addEventListener('click', exitPayEditMode);
 
     document.getElementById('save-pay-btn').addEventListener('click', () => {
+      if (Date.now() - (window._lastPaySaveTs || 0) < 1000) return;
       if (!Array.isArray(state.payments)) state.payments = [];
       if (!Array.isArray(state.parties)) state.parties = [];
       const rawPayParty = document.getElementById('pay-party').value.trim();
@@ -2430,31 +2745,71 @@
       const amt = Number(document.getElementById('pay-amount').value) || 0;
       if (amt <= 0) return showToast('કૃપા કરીને સાચી રકમ લખો');
       const typ = document.getElementById('pay-type').value;
+      const modeVal = document.getElementById('pay-mode').value;
+      const noteVal = document.getElementById('pay-note').value.trim();
+      const noVal = document.getElementById('pay-no').value.trim() || (typeof getNextPayNo === 'function' ? getNextPayNo(typ) : ('PAY/' + Date.now()));
+      const dateVal = fmtDate(document.getElementById('pay-date').value || getLocalISO());
+
+      let payPartyObj = state.parties.find(x => String(x.name || '').trim().toLowerCase() === party.toLowerCase());
+      if (!payPartyObj && rawPayParty && rawPayParty !== 'રોકડ પાર્ટી') {
+        payPartyObj = { id: Date.now() + 2, name: rawPayParty, phone: '', city: '', due: 0, dueDate: '', updatedAt: Date.now() };
+        state.parties.push(payPartyObj);
+      }
+
+      if (window.editingPayId) {
+        const oldPay = state.payments.find(x => String(x.id) === String(window.editingPayId));
+        if (oldPay) {
+          const wasCashBillRec = isReceiptForCashBill(oldPay);
+          if (!wasCashBillRec) {
+            const oldParty = state.parties.find(x => String(x.name || '').trim().toLowerCase() === String(oldPay.party || '').trim().toLowerCase());
+            if (oldParty) {
+              if (oldPay.type === 'In') oldParty.due = (Number(oldParty.due) || 0) + (Number(oldPay.amount) || 0);
+              else oldParty.due = (Number(oldParty.due) || 0) - (Number(oldPay.amount) || 0);
+              oldParty.updatedAt = Date.now();
+            }
+          }
+          oldPay.no = noVal;
+          oldPay.date = dateVal;
+          oldPay.type = typ;
+          oldPay.party = party;
+          oldPay.mode = modeVal;
+          oldPay.note = noteVal;
+          oldPay.amount = amt;
+          oldPay.updatedAt = Date.now();
+          if (payPartyObj && !wasCashBillRec) {
+            if (typ === 'In') payPartyObj.due = (Number(payPartyObj.due) || 0) - amt;
+            else payPartyObj.due = (Number(payPartyObj.due) || 0) + amt;
+            payPartyObj.updatedAt = Date.now();
+          }
+        }
+        window._lastPaySaveTs = Date.now();
+        exitPayEditMode();
+        saveState(); renderPaymentsTable(); renderAll(); syncReceiptPreview();
+        return showToast('રસીદ સફળતાપૂર્વક અપડેટ થઈ ગઈ ✔');
+      }
+
       const entry = {
         id: Date.now(),
-        no: document.getElementById('pay-no').value.trim(),
-        date: fmtDate(document.getElementById('pay-date').value),
+        no: noVal,
+        date: dateVal,
         type: typ, party,
-        mode: document.getElementById('pay-mode').value,
-        note: document.getElementById('pay-note').value.trim(),
+        mode: modeVal,
+        note: noteVal,
         amount: amt,
         updatedAt: Date.now()
       };
       const matchedCashBill = isReceiptForCashBill(entry);
       entry.forCashBill = !!matchedCashBill;
       state.payments.unshift(entry);
-      let payPartyObj = state.parties.find(x => String(x.name || '').trim().toLowerCase() === party.toLowerCase());
-      if (!payPartyObj && rawPayParty && rawPayParty !== 'રોકડ પાર્ટી') {
-        payPartyObj = { id: Date.now() + 2, name: rawPayParty, phone: '', city: '', due: 0, dueDate: '', updatedAt: Date.now() };
-        state.parties.push(payPartyObj);
-      }
       if (payPartyObj && !matchedCashBill) {
         if (typ === 'In') payPartyObj.due = (Number(payPartyObj.due) || 0) - amt;
         else payPartyObj.due = (Number(payPartyObj.due) || 0) + amt;
         payPartyObj.updatedAt = Date.now();
       }
+      window._lastPaySaveTs = Date.now();
       document.getElementById('pay-no').value = getNextPayNo(typ);
       document.getElementById('pay-amount').value = '';
+      document.getElementById('pay-note').value = '';
       saveState(); renderPaymentsTable(); renderAll(); syncReceiptPreview();
       showToast((typ === 'In' ? 'Payment In (રસીદ)' : 'Payment Out') + ' સેવ થઈ ગયું ✔');
     });
@@ -2470,24 +2825,72 @@
       setTimeout(() => { window.print(); setTimeout(cleanup, 1200); }, 100);
     });
 
+    function loadPaymentToForm(p) {
+      if (!p) return;
+      document.getElementById('pay-type').value = p.type || 'In';
+      document.getElementById('pay-no').value = p.no || '';
+      document.getElementById('pay-date').value = typeof toISODateKey === 'function' ? toISODateKey(p.date) : (p.date || getLocalISO());
+      document.getElementById('pay-party').value = p.party || '';
+      document.getElementById('pay-amount').value = Number(p.amount || 0);
+      document.getElementById('pay-mode').value = p.mode || 'Cash';
+      document.getElementById('pay-note').value = p.note || '';
+      syncReceiptPreview();
+    }
+
     function renderPaymentsTable() {
       const tb = document.getElementById('payments-tbody');
       if (!tb) return;
       tb.innerHTML = '';
-      (state.payments || []).forEach(p => {
+      const sortedPays = (state.payments || []).slice().sort((a, b) =>
+        (toISODateKey(b.date) || '').localeCompare(toISODateKey(a.date) || '') || ((Number(b.id) || 0) - (Number(a.id) || 0))
+      );
+      sortedPays.forEach(p => {
         tb.innerHTML += `<tr class="border-b border-slate-200">
           <td class="p-2 font-bold">${p.no}</td>
           <td class="p-2">${fmtDate(p.date)}</td>
           <td class="p-2"><span class="px-2 py-0.5 rounded text-xs font-bold ${p.type==='In'?'bg-emerald-100 text-emerald-800':'bg-rose-100 text-rose-800'}">${p.type==='In'?'Payment In':'Payment Out'}</span></td>
           <td class="p-2">${p.party}</td>
-          <td class="p-2">${p.mode} ${p.note ? '('+p.note+')' : ''}</td>
+          <td class="p-2">${window._v43Esc(p.mode)} ${p.note ? '('+window._v43Esc(p.note)+')' : ''}</td>
           <td class="p-2 text-right font-bold">₹ ${Number(p.amount || 0).toFixed(2)}</td>
-          <td class="p-2 text-center whitespace-nowrap space-x-1"><button data-wa-pay="${p.id}" class="wa-pay-row px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold">💬</button><button data-del-pay="${p.id}" class="del-pay px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold">🗑️</button></td>
+          <td class="p-2 text-center whitespace-nowrap space-x-1"><button data-edit-pay="${p.id}" title="એડિટ કરો" class="edit-pay px-2 py-1 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 text-xs font-bold">✏️</button><button data-reprint-pay="${p.id}" title="પ્રિન્ટ કાઢો" class="reprint-pay px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs font-bold">🖨️</button><button data-wa-pay="${p.id}" title="WhatsApp" class="wa-pay-row px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold">💬</button><button data-del-pay="${p.id}" title="ડિલીટ" class="del-pay px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold">🗑️</button></td>
         </tr>`;
+      });
+      document.querySelectorAll('.edit-pay').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = e.currentTarget.dataset.editPay;
+          const p = (state.payments || []).find(x => String(x.id) === String(id));
+          if (!p) return;
+          window.editingPayId = p.id;
+          loadPaymentToForm(p);
+          const et = document.getElementById('edit-pay-text');
+          if (et) et.textContent = '✏️ રસીદ એડિટ મોડ: ' + p.no + ' — સુધારો કરીને "સુધારો સેવ કરો" દબાવો';
+          document.getElementById('edit-pay-banner')?.classList.remove('hidden');
+          const spBtn = document.getElementById('save-pay-btn');
+          if (spBtn) spBtn.textContent = '💾 સુધારો સેવ કરો';
+          document.getElementById('tab-payments')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+      document.querySelectorAll('.reprint-pay').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = e.currentTarget.dataset.reprintPay;
+          const p = (state.payments || []).find(x => String(x.id) === String(id));
+          if (!p) return;
+          loadPaymentToForm(p);
+          setTimeout(() => document.getElementById('print-pay-btn')?.click(), 120);
+        });
       });
       document.querySelectorAll('.del-pay').forEach(btn => {
         btn.addEventListener('click', e => {
-          const id = e.target.dataset.delPay;
+          const bEl = e.currentTarget;
+          if (bEl.dataset.confirm !== '1') {
+            bEl.dataset.confirm = '1';
+            bEl._origHtml = bEl.innerHTML;
+            bEl.textContent = '⚠️?';
+            showToast('રસીદ ડિલીટ કરવા ફરીથી ટચ કરો');
+            setTimeout(() => { if (bEl && bEl.dataset.confirm === '1') { bEl.dataset.confirm = ''; bEl.innerHTML = bEl._origHtml || '🗑️'; } }, 3200);
+            return;
+          }
+          const id = bEl.dataset.delPay;
           const payObj = (state.payments || []).find(x => String(x.id) === String(id));
           if (payObj) {
             if (typeof window.markRecordDeleted === 'function') window.markRecordDeleted('payments', payObj);
@@ -2558,7 +2961,16 @@
         });
         document.querySelectorAll('.del-exp').forEach(btn => {
           btn.addEventListener('click', e => {
-            const id = e.currentTarget.dataset.delExp;
+            const bEl = e.currentTarget;
+            if (bEl.dataset.confirm !== '1') {
+              bEl.dataset.confirm = '1';
+              bEl._origHtml = bEl.innerHTML;
+              bEl.textContent = '⚠️?';
+              showToast('ખર્ચ ડિલીટ કરવા ફરીથી ટચ કરો');
+              setTimeout(() => { if (bEl && bEl.dataset.confirm === '1') { bEl.dataset.confirm = ''; bEl.innerHTML = bEl._origHtml || '🗑️'; } }, 3200);
+              return;
+            }
+            const id = bEl.dataset.delExp;
             const found = (state.expenses || []).find(x => String(x.id) === String(id));
             if (found && typeof markRecordDeleted === 'function') markRecordDeleted('expenses', found);
             state.expenses = (state.expenses || []).filter(x => String(x.id) !== String(id));
@@ -2709,33 +3121,33 @@
 
     function buildPartyLedgerData(p) {
       const entries = [];
-      state.bills.filter(b => (b.buyer || '').toLowerCase() === (p.name || '').toLowerCase()).forEach(b => {
+      state.bills.filter(b => String(b.buyer || '').trim().toLowerCase() === String(p.name || '').trim().toLowerCase()).forEach(b => {
         const k = b.kind || 'Sales';
         const itemsTxt = (b.rows || []).map(r => `${r.desc}${r.kg ? ' (' + r.kg + 'Kg)' : ''}`).filter(Boolean).join(', ');
         if (k === 'PurchaseReturn') {
           const tot = Number(b.total) || 0;
           const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), _ord: 0, desc: `ખરીદ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
         } else if (k === 'Return') {
           const tot = Number(b.total) || 0;
           const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `વેચાણ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), _ord: 0, desc: `વેચાણ માલ પરત ${b.no} (${b.payment || 'Credit'})${b.origBillNo ? ' (બિલ ' + b.origBillNo + ')' : ''}`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
         } else if (k === 'Purchase') {
           const tot = Number(b.total) || 0;
           const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `ખરીદ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), _ord: 0, desc: `ખરીદ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: isUnpaidOrPartial ? 0 : tot, credit: tot });
         } else {
           const tot = Number(b.total) || 0;
           const isUnpaidOrPartial = b.payment === 'Credit' || b.payment === 'Partial';
-          entries.push({ date: b.date, sortKey: toISODateKey(b.date), desc: `વેચાણ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
+          entries.push({ date: b.date, sortKey: toISODateKey(b.date), _ord: 0, desc: `વેચાણ બિલ ${b.no} (${b.payment})`, sub: itemsTxt, debit: tot, credit: isUnpaidOrPartial ? 0 : tot });
         }
       });
-      (state.payments || []).filter(pay => (pay.party || '').toLowerCase() === (p.name || '').toLowerCase()).forEach(pay => {
+      (state.payments || []).filter(pay => String(pay.party || '').trim().toLowerCase() === String(p.name || '').trim().toLowerCase()).forEach(pay => {
         if (isReceiptForCashBill(pay)) return; // Already settled on the Cash/Bank bill row
-        if (pay.type === 'In') entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), desc: `પૈસા જમા (રસીદ ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: 0, credit: Number(pay.amount)||0 });
-        else entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), desc: `ચૂકવણી (વાઉચર ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: Number(pay.amount)||0, credit: 0 });
+        if (pay.type === 'In') entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), _ord: 1, desc: `પૈસા જમા (રસીદ ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: 0, credit: Number(pay.amount)||0 });
+        else entries.push({ date: pay.date, sortKey: toISODateKey(pay.date), _ord: 1, desc: `ચૂકવણી (વાઉચર ${pay.no} • ${pay.mode})`, sub: pay.note || '', debit: Number(pay.amount)||0, credit: 0 });
       });
-      entries.sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''));
+      entries.sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || '') || ((a._ord || 0) - (b._ord || 0)));
       let run = 0, totD = 0, totC = 0;
       entries.forEach(en => {
         totD += en.debit;
@@ -2749,7 +3161,10 @@
     function recalcAllPartyBalances() {
       (state.parties || []).forEach(p => {
         const data = buildPartyLedgerData(p);
-        p.due = data.netBalance;
+        if (Math.abs((Number(p.due) || 0) - data.netBalance) > 0.001) {
+          p.due = data.netBalance;
+          p.updatedAt = Date.now();
+        }
       });
       saveState();
       renderAll();
@@ -2931,7 +3346,7 @@
         const balTag = en.balance > 0 ? 'લેવા' : (en.balance < 0 ? 'આપવા' : '');
         tb.innerHTML += `<tr class="border-b border-slate-200">
           <td class="p-2 whitespace-nowrap">${fmtDate(en.date)}</td>
-          <td class="p-2"><div class="font-semibold">${en.desc}</div>${en.sub ? `<div class="text-[10px] text-slate-500">${en.sub}</div>` : ''}</td>
+          <td class="p-2"><div class="font-semibold">${window._v43Esc(en.desc)}</div>${en.sub ? `<div class="text-[10px] text-slate-500">${window._v43Esc(en.sub)}</div>` : ''}</td>
           <td class="p-2 text-right font-bold text-amber-700">${en.debit ? '₹ ' + en.debit.toFixed(0) : '-'}</td>
           <td class="p-2 text-right font-bold text-emerald-700">${en.credit ? '₹ ' + en.credit.toFixed(0) : '-'}</td>
           <td class="p-2 text-right font-extrabold ${balColor}">₹ ${Math.abs(en.balance).toFixed(0)} <span class="text-[10px]">${balTag}</span></td>
@@ -2995,7 +3410,50 @@
     const closeL = document.getElementById('close-ledger-modal');
     if (closeL) closeL.addEventListener('click', () => { const m = document.getElementById('party-ledger-modal'); if (m) { m.classList.add('hidden'); m.style.display = 'none'; } });
     const printL = document.getElementById('ledger-print-btn');
-    if (printL) printL.addEventListener('click', () => window.print());
+    if (printL) printL.addEventListener('click', () => {
+      const sheet = document.getElementById('rojmel-print-sheet');
+      if (!sheet) return window.print();
+      const title = document.getElementById('ledger-party-title')?.textContent || 'પાર્ટી ખાતા સ્ટેટમેન્ટ';
+      const sub = document.getElementById('ledger-party-sub')?.textContent || '';
+      const deb = document.getElementById('ledger-tot-debit')?.textContent || '₹ 0';
+      const cre = document.getElementById('ledger-tot-credit')?.textContent || '₹ 0';
+      const bal = document.getElementById('ledger-tot-bal')?.textContent || '₹ 0';
+      const balLbl = document.getElementById('ledger-tot-bal-label')?.textContent || 'ચોખ્ખું બેલેન્સ';
+      const rowsHtml = document.getElementById('ledger-tbody')?.innerHTML || '';
+      const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      sheet.innerHTML = `
+        <div style="max-width:780px;margin:0 auto;font-family:'Noto Sans Gujarati',Inter,sans-serif;color:#0F172A;">
+          <div style="border-bottom:2px solid #0D2C4D;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+              <div style="font-size:18px;font-weight:800;color:#0D2C4D;">રાજ ટ્રેડિંગ કંપની (Raj Trading Company)</div>
+              <div style="font-size:11px;color:#475569;">પ્રોપ્રાઈટર: રાજ બારોટ | મો.: +91 88662 14018 | મુ. પો. મોટીઝેર, તા. કપડવંજ</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:800;color:#0D2C4D;">${esc(title)}</div>
+              <div style="font-size:11px;color:#475569;">${esc(sub)}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;text-align:center;">
+            <div style="border:1px solid #CBD5E1;border-radius:8px;padding:8px;"><div style="font-size:10px;color:#64748B;">કુલ ઉધાર / વેચાણ (+)</div><div style="font-size:14px;font-weight:800;color:#B45309;">${esc(deb)}</div></div>
+            <div style="border:1px solid #CBD5E1;border-radius:8px;padding:8px;"><div style="font-size:10px;color:#64748B;">કુલ જમા / ખરીદી (-)</div><div style="font-size:14px;font-weight:800;color:#15803D;">${esc(cre)}</div></div>
+            <div style="border:1px solid #CBD5E1;border-radius:8px;padding:8px;"><div style="font-size:10px;color:#64748B;">${esc(balLbl)}</div><div style="font-size:14px;font-weight:800;color:#BE123C;">${esc(bal)}</div></div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead><tr style="background:#F1F5F9;border-bottom:2px solid #0D2C4D;">
+              <th style="padding:6px;text-align:left;border:1px solid #CBD5E1;">તારીખ</th>
+              <th style="padding:6px;text-align:left;border:1px solid #CBD5E1;">વિગત (બિલ / રસીદ)</th>
+              <th style="padding:6px;text-align:right;border:1px solid #CBD5E1;">ઉધાર (+)</th>
+              <th style="padding:6px;text-align:right;border:1px solid #CBD5E1;">જમા (-)</th>
+              <th style="padding:6px;text-align:right;border:1px solid #CBD5E1;">બેલેન્સ</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
+      document.body.classList.add('printing-rojmel');
+      const cleanup = () => { document.body.classList.remove('printing-rojmel'); };
+      window.addEventListener('afterprint', cleanup, { once: true });
+      setTimeout(() => { window.print(); setTimeout(cleanup, 1200); }, 100);
+    });
 
 
     function toISODateKey(d) {
@@ -3230,9 +3688,11 @@
         const bno = document.getElementById('bill-no');
         if (bk && bno) bno.value = getNextDocNo(bk.value);
       }
-      const pt = document.getElementById('pay-type');
-      const pno = document.getElementById('pay-no');
-      if (pt && pno) pno.value = getNextPayNo(pt.value);
+      if (!window.editingPayId) {
+        const pt = document.getElementById('pay-type');
+        const pno = document.getElementById('pay-no');
+        if (pt && pno) pno.value = getNextPayNo(pt.value);
+      }
     }
     const bkSel = document.getElementById('bill-kind');
     if (bkSel) {
@@ -4166,7 +4626,7 @@
       openStartupOrUnlockModal(true);
       document.addEventListener('click', e => {
         if (!staffLocked) return;
-        const tBtn = e.target.closest('[data-tab="reports"], #quick-reports-btn, .del-bill, .del-pay, .del-item, .del-party, .del-exp');
+        const tBtn = e.target.closest('[data-tab="reports"], #quick-reports-btn, .del-bill, .del-pay, .edit-pay, .del-item, .del-party, .del-exp');
         if (tBtn) {
           e.preventDefault();
           e.stopPropagation();
@@ -4273,7 +4733,7 @@
           document.body.appendChild(dl);
         }
         bn.setAttribute('list', 'kr-party-datalist');
-        dl.innerHTML = (state.parties || []).map(p => `<option value="${p.name}">${p.city || ''} • ${p.phone || ''}</option>`).join('');
+        dl.innerHTML = (state.parties || []).map(p => `<option value="${window._v43Esc(p.name)}">${p.city || ''} • ${p.phone || ''}</option>`).join('');
       }
 
       // #1 Full Detailed PNG Photo Bill Download / Share
@@ -4496,6 +4956,9 @@
       });
 
       document.getElementById('pp-save-btn')?.addEventListener('click', () => {
+        if (window._ppSaveBusy) return;
+        window._ppSaveBusy = true;
+        setTimeout(() => { window._ppSaveBusy = false; }, 700);
         const p = (state.parties || []).find(x => String(x.id) === String(activePartialPartyId));
         if (!p) return;
         const amt = Number(document.getElementById('pp-amount')?.value || 0);
@@ -5100,6 +5563,31 @@
         });
         state.parties = uniqueParties;
 
+        // Deduplicate payments with identical (type + Receipt No)
+        const seenPayNo = new Map();
+        const uniquePays = [];
+        state.payments.forEach(pm => {
+          const pk = ((pm.type || 'In') + '|' + String(pm.no || '').trim().toUpperCase());
+          if (!pm.no) { uniquePays.push(pm); return; }
+          if (!seenPayNo.has(pk)) {
+            seenPayNo.set(pk, pm);
+            uniquePays.push(pm);
+          } else {
+            const prev = seenPayNo.get(pk);
+            const prevScore = Number(prev.updatedAt || 0) || Number(prev.id || 0);
+            const curScore = Number(pm.updatedAt || 0) || Number(pm.id || 0);
+            if (curScore > prevScore) {
+              addTombstone('payments', prev);
+              const idx = uniquePays.indexOf(prev);
+              if (idx !== -1) uniquePays[idx] = pm;
+              seenPayNo.set(pk, pm);
+            } else {
+              addTombstone('payments', pm);
+            }
+          }
+        });
+        state.payments = uniquePays;
+
         // Deduplicate items with identical name
         const seenItemName = new Map();
         const uniqueItems = [];
@@ -5147,7 +5635,7 @@
         ['items', 'bills', 'parties', 'payments', 'expenses'].forEach(col => {
           const active = (state[col] || []).map(x => Object.assign({}, x, { deleted: false, updatedAt: x.updatedAt || Date.now() }));
           const activeIds = new Set(active.map(x => String(x.id)));
-          const deletedList = Object.values((tsMap && tsMap[col]) || {}).filter(x => x && !activeIds.has(String(x.id))).map(x => Object.assign({}, x, { deleted: true, updatedAt: Math.max(Number(x.updatedAt || 0), Date.now()) }));
+          const deletedList = Object.values((tsMap && tsMap[col]) || {}).filter(x => x && !activeIds.has(String(x.id))).map(x => Object.assign({}, x, { deleted: true, updatedAt: Number(x.updatedAt || 0) || Date.now() }));
           payload[col] = active.concat(deletedList);
         });
         return payload;
@@ -5229,13 +5717,13 @@
       // Capture deletes BEFORE they happen so tombstones are recorded with updatedAt = Date.now()
       document.addEventListener('click', e => {
         const delItemBtn = e.target.closest('.del-item');
-        if (delItemBtn && delItemBtn.dataset.delItem) {
+        if (delItemBtn && delItemBtn.dataset.delItem && delItemBtn.dataset.confirm === '1') {
           const id = delItemBtn.dataset.delItem;
           const found = (state.items || []).find(x => String(x.id) === String(id));
           if (found) addTombstone('items', found);
         }
         const delBillBtn = e.target.closest('.del-bill');
-        if (delBillBtn && delBillBtn.dataset.delBill) {
+        if (delBillBtn && delBillBtn.dataset.delBill && delBillBtn.dataset.confirm === '1') {
           const id = delBillBtn.dataset.delBill;
           const found = (state.bills || []).find(x => String(x.id) === String(id));
           if (found) addTombstone('bills', found);
@@ -5247,7 +5735,7 @@
           if (found) addTombstone('parties', found);
         }
         const delPayBtn = e.target.closest('.del-pay');
-        if (delPayBtn && delPayBtn.dataset.delPay) {
+        if (delPayBtn && delPayBtn.dataset.delPay && delPayBtn.dataset.confirm === '1') {
           const id = delPayBtn.dataset.delPay;
           const found = (state.payments || []).find(x => String(x.id) === String(id));
           if (found) addTombstone('payments', found);
@@ -5594,6 +6082,34 @@
         };
       }
       applyPurePrintBadges();
+    })();
+  </script>
+  <script id="mobile-ux-v41">
+    (function() {
+      // Prevent only multi-touch iOS pinch-zoom (never touch single-finger scroll!)
+      document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+
+      // Backdrop-click & Escape key close for non-PIN modals
+      const closableModals = ['party-ledger-modal', 'cloud-modal', 'partial-pay-modal', 'price-list-modal'];
+      function closeModalEl(el) {
+        if (!el) return;
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+      closableModals.forEach(function(id) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.addEventListener('click', function(e) {
+          if (e.target === m) closeModalEl(m);
+        });
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        closableModals.forEach(function(id) {
+          const m = document.getElementById(id);
+          if (m && !m.classList.contains('hidden')) closeModalEl(m);
+        });
+      });
     })();
   </script>
 </body>
